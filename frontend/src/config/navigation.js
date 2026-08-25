@@ -1,0 +1,30 @@
+import {
+  LayoutDashboard,
+  UserRound,
+  BrainCircuit,
+  FolderKanban,
+  Code2,
+  Award,
+  GraduationCap,
+  BriefcaseBusiness,
+  BookOpen,
+  Target,
+  BarChart3,
+  Sparkles,
+} from "lucide-react";
+
+export const nav = [
+  ["Dashboard", LayoutDashboard],
+  ["Profile", UserRound],
+  ["Skills & AI", BrainCircuit],
+  ["Projects", FolderKanban],
+  ["Coding", Code2],
+  ["Certificates", Award],
+  ["Academics", GraduationCap],
+  ["Career", BriefcaseBusiness],
+  ["Applications", BriefcaseBusiness],
+  ["Journal", BookOpen],
+  ["Goals", Target],
+  ["Analytics", BarChart3],
+  ["AI Assistant", Sparkles],
+];
