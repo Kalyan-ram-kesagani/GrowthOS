@@ -29,7 +29,6 @@ function Login({ onRegister }) {
 
     try {
       await signIn(email, password);
-      window.location.href = "/dashboard";
     } catch (authError) {
       setError(authError.message);
     } finally {

@@ -40,7 +40,7 @@ function Dashboard({ stats, setPage }) {
 
   useEffect(() => {
 
-    fetch("http://127.0.0.1:8000/dashboard")
+    fetch("https://growth-os-backend-ebon.vercel.app/dashboard")
       .then((response) => response.json())
       .then((data) => {
         console.log("Dashboard data:", data);

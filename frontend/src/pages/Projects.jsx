@@ -27,7 +27,7 @@ function ProjectsPage() {
       setLoading(true);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/projects"
+        "https://growth-os-backend-ebon.vercel.app/projects"
       );
 
       if (!response.ok) {
@@ -69,7 +69,7 @@ function ProjectsPage() {
       setSaving(true);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/projects",
+        "https://growth-os-backend-ebon.vercel.app/projects",
         {
           method: "POST",
 
@@ -135,7 +135,7 @@ function ProjectsPage() {
       setSaving(true);
 
       const response = await fetch(
-        `http://127.0.0.1:8000/projects/${editingId}`,
+        `https://growth-os-backend-ebon.vercel.app/projects/${editingId}`,
         {
           method: "PUT",
 
@@ -185,7 +185,7 @@ function ProjectsPage() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/projects/${id}`,
+        `https://growth-os-backend-ebon.vercel.app/projects/${id}`,
         {
           method: "DELETE",
         }

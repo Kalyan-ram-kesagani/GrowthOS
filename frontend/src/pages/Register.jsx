@@ -71,8 +71,6 @@ function Register({ onLogin }) {
 
       if (authError) {
         setError(authError.message);
-      } else {
-        window.location.href = "/dashboard"; // Redirect after successful signup
       }
 
     } catch (err) {
