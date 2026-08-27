@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import Card from "../components/Card";
+import { api } from "../services/api";
 import "../style.css";
 
 function ProjectsPage() {
@@ -25,31 +26,14 @@ function ProjectsPage() {
   const loadProjects = async () => {
     try {
       setLoading(true);
-
-      const response = await fetch(
-        "https://growth-os-backend-ebon.vercel.app/projects"
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to load projects");
-      }
-
-      const data = await response.json();
-
+      const data = await api.get("/projects");
       const sortedProjects = Array.isArray(data)
         ? [...data].reverse()
         : [];
-
       setProjects(sortedProjects);
-
     } catch (error) {
-      console.error(
-        "Error loading projects:",
-        error
-      );
-
+      console.error("Error loading projects:", error);
       setProjects([]);
-
     } finally {
       setLoading(false);
     }
@@ -67,40 +51,13 @@ function ProjectsPage() {
 
     try {
       setSaving(true);
-
-      const response = await fetch(
-        "https://growth-os-backend-ebon.vercel.app/projects",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            title,
-            description,
-            status,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to create project");
-      }
-
+      await api.post("/projects", { title, description, status });
       setTitle("");
       setDescription("");
       setStatus("In Progress");
-
       await loadProjects();
-
     } catch (error) {
-      console.error(
-        "Error creating project:",
-        error
-      );
-
+      console.error("Error creating project:", error);
     } finally {
       setSaving(false);
     }
@@ -108,21 +65,10 @@ function ProjectsPage() {
 
   const startEdit = (project) => {
     setEditingId(project.id);
-
     setTitle(project.title || "");
-
-    setDescription(
-      project.description || ""
-    );
-
-    setStatus(
-      project.status || "In Progress"
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setDescription(project.description || "");
+    setStatus(project.status || "In Progress");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const updateProject = async () => {
@@ -133,83 +79,33 @@ function ProjectsPage() {
 
     try {
       setSaving(true);
-
-      const response = await fetch(
-        `https://growth-os-backend-ebon.vercel.app/projects/${editingId}`,
-        {
-          method: "PUT",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            title,
-            description,
-            status,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update project");
-      }
-
+      await api.put(`/projects/${editingId}`, { title, description, status });
       setEditingId(null);
-
       setTitle("");
       setDescription("");
       setStatus("In Progress");
-
       await loadProjects();
-
     } catch (error) {
-      console.error(
-        "Error updating project:",
-        error
-      );
-
+      console.error("Error updating project:", error);
     } finally {
       setSaving(false);
     }
   };
 
   const deleteProject = async (id) => {
-    const confirmed = window.confirm(
-      "Delete this project?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const confirmed = window.confirm("Delete this project?");
+    if (!confirmed) return;
 
     try {
-      const response = await fetch(
-        `https://growth-os-backend-ebon.vercel.app/projects/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to delete project"
-        );
-      }
-
+      await api.delete(`/projects/${id}`);
       await loadProjects();
-
     } catch (error) {
-      console.error(
-        "Error deleting project:",
-        error
-      );
+      console.error("Error deleting project:", error);
     }
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-
     setTitle("");
     setDescription("");
     setStatus("In Progress");

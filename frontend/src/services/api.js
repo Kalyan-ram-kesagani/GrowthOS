@@ -1,35 +1,18 @@
-import { supabase } from "./supabase";
-
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://growth-os-backend-ebon.vercel.app";
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-async function getAccessToken() {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+const TOKEN_KEY = "growthos_token";
 
-  if (error) {
-    throw new Error(
-      `Unable to get authentication session: ${error.message}`
-    );
-  }
-
-  if (!session?.access_token) {
-    throw new Error(
-      "No Supabase access token found. Please log in again."
-    );
-  }
-
-  return session.access_token;
+function getAccessToken() {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-export async function apiRequest(
-  endpoint,
-  options = {}
-) {
-  const token = await getAccessToken();
+export async function apiRequest(endpoint, options = {}) {
+  const token = getAccessToken();
+
+  if (!token) {
+    throw new Error("Not authenticated. Please log in.");
+  }
 
   const headers = {
     "Content-Type": "application/json",
@@ -39,18 +22,13 @@ export async function apiRequest(
 
   const response = await fetch(
     `${API_BASE_URL}${endpoint}`,
-    {
-      ...options,
-      headers,
-    }
+    { ...options, headers }
   );
 
   if (!response.ok) {
     const errorText = await response.text();
-
     throw new Error(
-      errorText ||
-        `API request failed with status ${response.status}`
+      errorText || `API request failed with status ${response.status}`
     );
   }
 

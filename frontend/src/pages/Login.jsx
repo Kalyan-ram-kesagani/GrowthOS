@@ -42,20 +42,7 @@ function Login({ onRegister }) {
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) {
-        setError(error.message);
-      } else {
-        setError("Password reset email sent. Check your inbox.");
-      }
-    } catch (err) {
-      setError("Failed to send reset email. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setError("Password reset is not yet supported. Please contact support.");
   };
 
   return (

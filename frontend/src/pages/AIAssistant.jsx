@@ -9,9 +9,7 @@ import {
 } from "lucide-react";
 
 import Card from "../components/Card";
-
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://growth-os-backend-ebon.vercel.app";
+import { api } from "../services/api";
 
 function AIAssistant() {
   const [analysis, setAnalysis] = useState(null);
@@ -50,26 +48,12 @@ function AIAssistant() {
       setError("");
       setAnalysis(null);
 
-      const response = await fetch(
-        `${API_URL}/ai/skill-gap`
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to run skill gap analysis"
-        );
-      }
-
-      const data = await response.json();
-
+      const data = await api.get("/ai/skill-gap");
       setAnalysis(data);
 
     } catch (err) {
       console.error(err);
-
-      setError(
-        "Could not connect to the Skill Gap Analysis backend."
-      );
+      setError("Could not connect to the Skill Gap Analysis backend.");
 
     } finally {
       setLoading(false);
@@ -87,18 +71,7 @@ function AIAssistant() {
       setError("");
       setCareerReadiness(null);
 
-      const response = await fetch(
-        `${API_URL}/api/career-readiness`
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to calculate career readiness"
-        );
-      }
-
-      const data = await response.json();
-
+      const data = await api.get("/ai/career-readiness");
       setCareerReadiness(data);
 
     } catch (err) {
@@ -120,18 +93,7 @@ function AIAssistant() {
       setError("");
       setWeeklyInsights(null);
 
-      const response = await fetch(
-        `${API_URL}/api/weekly-insights`
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to generate weekly insights"
-        );
-      }
-
-      const data = await response.json();
-
+      const data = await api.get("/api/weekly-insights");
       setWeeklyInsights(data);
 
     } catch (err) {
@@ -153,19 +115,7 @@ function AIAssistant() {
       setError("");
       setProjectIdeas(null);
 
-      const response = await fetch(
-        `${API_URL}/ai/project-ideas`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail ||
-          "Failed to generate project ideas"
-        );
-      }
-
+      const data = await api.get("/ai/project-ideas");
       setProjectIdeas(data);
 
     } catch (err) {
@@ -623,65 +573,34 @@ function AIAssistant() {
             {weeklyInsights.message}
           </p>
 
-          {weeklyInsights.summary && (
+          {weeklyInsights.breakdown && (
 
             <div>
 
               <p>
                 <b>Skills:</b>{" "}
-                {weeklyInsights.summary.total_skills ?? 0}
+                {weeklyInsights.breakdown.skills?.total ?? 0}
               </p>
 
               <p>
                 <b>Projects:</b>{" "}
-                {weeklyInsights.summary.total_projects ?? 0}
+                {weeklyInsights.breakdown.projects?.total ?? 0}
               </p>
 
               <p>
                 <b>Completed Projects:</b>{" "}
-                {
-                  weeklyInsights.summary
-                    .completed_projects ?? 0
-                }
+                {weeklyInsights.breakdown.projects?.completed ?? 0}
               </p>
 
               <p>
                 <b>Goals Completed:</b>{" "}
-                {
-                  weeklyInsights.summary
-                    .completed_goals ?? 0
-                }
+                {weeklyInsights.breakdown.goals?.completed ?? 0}
               </p>
 
               <p>
                 <b>Coding Problems Solved:</b>{" "}
-                {
-                  weeklyInsights.summary
-                    .solved_problems ?? 0
-                }
+                {weeklyInsights.breakdown.coding?.solved ?? 0}
               </p>
-
-            </div>
-
-          )}
-
-          {weeklyInsights.insights?.length > 0 && (
-
-            <div>
-
-              <h3>
-                Your Insights
-              </h3>
-
-              {weeklyInsights.insights.map(
-                (insight, index) => (
-
-                  <p key={index}>
-                    • {insight}
-                  </p>
-
-                )
-              )}
 
             </div>
 

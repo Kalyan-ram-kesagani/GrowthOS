@@ -3,152 +3,114 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
 } from "react";
-
-import { supabase } from "../services/supabase";
 
 const AuthContext = createContext(null);
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+const TOKEN_KEY = "growthos_token";
+
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchMe = useCallback(async (accessToken) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    const getCurrentSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("Error getting session:", error);
-          throw error;
-        }
-
-        // Check if token is expired
-        if (session?.expires_at && session.expires_at * 1000 < Date.now()) {
-          await supabase.auth.signOut();
-          setSession(null);
-        } else if (mounted) {
-          setSession(session ?? null);
-        }
-
-        if (mounted) {
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Session error:", error);
-
-        if (mounted) {
-          setSession(null);
-          setLoading(false);
-        }
+    const init = async () => {
+      const storedToken = localStorage.getItem(TOKEN_KEY);
+      if (!storedToken) {
+        if (mounted) setLoading(false);
+        return;
       }
-    };
 
-    getCurrentSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession ?? null);
+      const me = await fetchMe(storedToken);
+      if (mounted) {
+        if (me) {
+          setToken(storedToken);
+          setUser(me);
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+        }
         setLoading(false);
       }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
     };
-  }, []);
 
-  // SIGN UP
+    init();
+    return () => { mounted = false; };
+  }, [fetchMe]);
+
   const signUp = async (name, email, password, { username }) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-          username,
-        },
-        emailRedirectTo: window.location.origin,
-      },
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password }),
     });
 
-    if (error) {
-      throw new Error(
-        error.message.includes("already been registered")
-          ? "Email already registered. Try signing in."
-          : "Failed to sign up. Please try again."
-      );
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Registration failed");
     }
 
-    // Force session update after signup
-    const { data: sessionData } = await supabase.auth.getSession();
-    setSession(sessionData.session);
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    setToken(data.access_token);
 
-    return data;
+    const me = await fetchMe(data.access_token);
+    if (me) setUser(me);
   };
 
-  // EMAIL LOGIN
   const signIn = async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const formData = new URLSearchParams();
+    formData.append("username", email);
+    formData.append("password", password);
 
-      if (error) {
-        throw error;
-      }
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData.toString(),
+    });
 
-      return data;
-    } catch (error) {
-      throw new Error(
-        error.message.includes("Invalid login credentials")
-          ? "Invalid email or password. Please try again."
-          : "Failed to sign in. Please try again later."
-      );
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Login failed");
     }
+
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    setToken(data.access_token);
+
+    const me = await fetchMe(data.access_token);
+    if (me) setUser(me);
   };
 
-  // LOGOUT
-  const signOut = async (redirectTo = "/") => {
-    try {
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error("Signout error:", error);
-        throw new Error("Failed to sign out. Please try again.");
-      }
-
-      // Clear storage
-      localStorage.clear();
-      sessionStorage.clear();
-      setSession(null);
-      window.location.href = redirectTo;
-
-      return true;
-    } catch (error) {
-      console.error("Signout failed:", error);
-      localStorage.clear();
-      sessionStorage.clear();
-      setSession(null);
-      window.location.href = redirectTo;
-      return false;
-    }
+  const signOut = async () => {
+    localStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+    setUser(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
-        session,
-        user: session?.user ?? null,
+        user,
+        token,
         loading,
         signUp,
         signIn,
@@ -162,12 +124,8 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider"
-    );
+    throw new Error("useAuth must be used inside AuthProvider");
   }
-
   return context;
 }

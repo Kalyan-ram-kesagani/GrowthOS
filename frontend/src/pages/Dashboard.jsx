@@ -33,6 +33,8 @@ import {
   codingData,
 } from "../data/dashboard";
 
+import { api } from "../services/api";
+
 
 function Dashboard({ stats, setPage }) {
 
@@ -40,8 +42,7 @@ function Dashboard({ stats, setPage }) {
 
   useEffect(() => {
 
-    fetch("https://growth-os-backend-ebon.vercel.app/dashboard")
-      .then((response) => response.json())
+    api.get("/dashboard")
       .then((data) => {
         console.log("Dashboard data:", data);
         setDashboardData(data);

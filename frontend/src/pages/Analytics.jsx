@@ -9,8 +9,7 @@ import {
   BriefcaseBusiness,
 } from "lucide-react";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://growth-os-backend-ebon.vercel.app";
+import { api } from "../services/api";
 
 function Analytics() {
   const [stats, setStats] = useState(null);
@@ -22,24 +21,11 @@ function Analytics() {
       try {
         setLoading(true);
         setError("");
-
-        const response = await fetch(
-          `${API_URL}/dashboard/stats`
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to load analytics");
-        }
-
-        const data = await response.json();
-
+        const data = await api.get("/dashboard/stats");
         setStats(data);
       } catch (err) {
         console.error(err);
-
-        setError(
-          "Could not connect to the Analytics backend."
-        );
+        setError("Could not connect to the Analytics backend.");
       } finally {
         setLoading(false);
       }

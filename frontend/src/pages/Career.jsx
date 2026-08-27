@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { BriefcaseBusiness } from "lucide-react";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://growth-os-backend-ebon.vercel.app";
+import { api } from "../services/api";
 
 function Career({ setPage }) {
   const [applications, setApplications] = useState([]);
@@ -14,25 +13,11 @@ function Career({ setPage }) {
       try {
         setLoading(true);
         setError("");
-
-        const response = await fetch(
-          `${API_URL}/applications`
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            "Failed to load applications"
-          );
-        }
-
-        const data = await response.json();
-
+        const data = await api.get("/applications");
         setApplications(data);
       } catch (err) {
         console.error(err);
-        setError(
-          "Could not connect to the Career backend."
-        );
+        setError("Could not connect to the Career backend.");
       } finally {
         setLoading(false);
       }
