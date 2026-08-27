@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
 
+import {
+  Pencil,
+  Trash2,
+  CalendarDays,
+  Plus,
+  X,
+} from "lucide-react";
+
 import Card from "../components/Card";
 import { api } from "../services/api";
 
@@ -14,6 +22,7 @@ function DataPage({
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const loadItems = async () => {
     try {
@@ -21,9 +30,17 @@ function DataPage({
 
       const data = await api.get(`/${type}`);
 
-      setItems(Array.isArray(data) ? data : []);
+      setItems(
+        Array.isArray(data)
+          ? [...data].reverse()
+          : []
+      );
     } catch (error) {
-      console.error(`Error loading ${type}:`, error);
+      console.error(
+        `Error loading ${type}:`,
+        error
+      );
+
       setItems([]);
     } finally {
       setLoading(false);
@@ -41,7 +58,12 @@ function DataPage({
     }));
   };
 
-  const addItem = async () => {
+  const resetForm = () => {
+    setForm({});
+    setEditingId(null);
+  };
+
+  const saveItem = async () => {
     const payload = {};
 
     fields.forEach((field) => {
@@ -60,16 +82,50 @@ function DataPage({
     try {
       setSaving(true);
 
-      await api.post(`/${type}`, payload);
+      if (!editingId) {
+        await api.post(
+          `/${type}`,
+          payload
+        );
+      } else {
+        await api.put(
+          `/${type}/${editingId}`,
+          payload
+        );
+      }
 
-      setForm({});
+      resetForm();
 
       await loadItems();
     } catch (error) {
-      console.error(`Error saving ${type}:`, error);
+      console.error(
+        `Error saving ${type}:`,
+        error
+      );
+
+      alert(
+        "Something went wrong. Please try again."
+      );
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEdit = (item) => {
+    const editData = {};
+
+    fields.forEach((field) => {
+      editData[field.name] =
+        item[field.name] ?? "";
+    });
+
+    setForm(editData);
+    setEditingId(item.id);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const deleteItem = async (id) => {
@@ -82,7 +138,13 @@ function DataPage({
     }
 
     try {
-      await api.delete(`/${type}/${id}`);
+      await api.delete(
+        `/${type}/${id}`
+      );
+
+      if (editingId === id) {
+        resetForm();
+      }
 
       await loadItems();
     } catch (error) {
@@ -90,170 +152,531 @@ function DataPage({
         `Error deleting ${type}:`,
         error
       );
+
+      alert(
+        "Failed to delete this item."
+      );
     }
   };
 
+  const getItemTitle = (item) => {
+    return (
+      item.name ||
+      item.title ||
+      item.full_name ||
+      item.organization ||
+      "Untitled"
+    );
+  };
+
   return (
-    <div className="page module">
-      <span className="eyebrow">
-        <Icon size={15} />
-        GROWTHOS MODULE
-      </span>
+    <div className="page module dataPage">
 
-      <h1>{title}</h1>
+      {/* PAGE HERO */}
 
-      <p>{description}</p>
+      <div className="moduleHeader dataPageHeader">
 
-      <Card className="coming">
-        <h2>Add New</h2>
+        <span className="eyebrow">
+          <Icon size={15} />
+          GROWTHOS {title.toUpperCase()}
+        </span>
 
-        {fields.map((field) => {
-          if (field.type === "select") {
-            return (
-              <select
-                key={field.name}
-                value={
-                  form[field.name] ||
-                  field.default ||
-                  field.options?.[0] ||
-                  ""
-                }
-                onChange={(e) =>
-                  handleChange(
-                    field.name,
-                    e.target.value
-                  )
-                }
-              >
-                {field.options?.map((option) => (
-                  <option
-                    key={option}
-                    value={option}
-                  >
-                    {option}
-                  </option>
-                ))}
-              </select>
-            );
-          }
+        <h1>{title}</h1>
 
-          if (field.type === "textarea") {
-            return (
-              <textarea
-                key={field.name}
-                placeholder={field.placeholder}
-                value={form[field.name] || ""}
-                onChange={(e) =>
-                  handleChange(
-                    field.name,
-                    e.target.value
-                  )
-                }
-              />
-            );
-          }
+        <p>
+          {description}
+        </p>
 
-          return (
-            <input
-              key={field.name}
-              type={field.type || "text"}
-              placeholder={field.placeholder}
-              value={form[field.name] || ""}
-              onChange={(e) =>
-                handleChange(
-                  field.name,
-                  e.target.value
-                )
-              }
-            />
-          );
-        })}
+      </div>
 
-        <br />
-        <br />
 
-        <button
-          onClick={addItem}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Add"}
-        </button>
-      </Card>
+      {/* ADD / EDIT FORM */}
 
-      <div className="moduleGrid">
-        {loading ? (
-          <p>Loading...</p>
-        ) : items.length === 0 ? (
-          <p>
-            No items yet. Add your first item!
-          </p>
-        ) : (
-          items.map((item) => (
-            <Card
-              key={item.id}
-              className="moduleCard"
-            >
-              <Icon />
+      <div className="formCenter">
 
-              <h3>
-                {item.name ||
-                  item.title ||
-                  "Untitled"}
-              </h3>
+        <Card className="dataForm">
 
-              {item.description && (
-                <p>{item.description}</p>
-              )}
+          <div className="formTitle">
 
-              {item.content && (
-                <p>{item.content}</p>
-              )}
+            <div className="formTitleContent">
 
-              {item.category && (
+              <div className="formIcon">
+                <Icon size={22} />
+              </div>
+
+              <div>
+
+                <h2>
+                  {editingId
+                    ? `Edit ${title.replace(/s$/, "")}`
+                    : `Add New ${title.replace(/s$/, "")}`}
+                </h2>
+
                 <p>
-                  Category: {item.category}
+                  {editingId
+                    ? "Update your information below."
+                    : `Add your ${title
+                        .replace(/s$/, "")
+                        .toLowerCase()} information to GrowthOS.`}
                 </p>
-              )}
 
-              {item.organization && (
-                <p>
-                  Organization:{" "}
-                  {item.organization}
-                </p>
-              )}
+              </div>
 
-              {item.level && (
-                <p>
-                  Level: {item.level}
-                </p>
-              )}
+            </div>
 
-              {item.progress !== undefined && (
-                <p>
-                  Progress: {item.progress}%
-                </p>
-              )}
-
-              {item.status && (
-                <small>
-                  Status: {item.status}
-                </small>
-              )}
-
-              <br />
-              <br />
+            {editingId && (
 
               <button
-                onClick={() =>
-                  deleteItem(item.id)
-                }
+                type="button"
+                className="closeEditBtn"
+                onClick={resetForm}
+                disabled={saving}
+                title="Cancel editing"
               >
-                Delete
+                <X size={18} />
               </button>
-            </Card>
-          ))
-        )}
+
+            )}
+
+          </div>
+
+
+          {/* FORM FIELDS */}
+
+          <div className="formFields">
+
+            {fields.map((field) => {
+
+              if (field.type === "select") {
+                return (
+
+                  <div
+                    className="formGroup"
+                    key={field.name}
+                  >
+
+                    <label>
+                      {field.label ||
+                        field.name}
+                    </label>
+
+                    <select
+                      value={
+                        form[field.name] ??
+                        field.default ??
+                        field.options?.[0] ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        handleChange(
+                          field.name,
+                          e.target.value
+                        )
+                      }
+                    >
+
+                      {field.options?.map(
+                        (option) => (
+
+                          <option
+                            key={option}
+                            value={option}
+                          >
+                            {option}
+                          </option>
+
+                        )
+                      )}
+
+                    </select>
+
+                  </div>
+
+                );
+              }
+
+
+              if (field.type === "textarea") {
+                return (
+
+                  <div
+                    className="formGroup fullWidth"
+                    key={field.name}
+                  >
+
+                    <label>
+                      {field.label ||
+                        field.name}
+                    </label>
+
+                    <textarea
+                      placeholder={
+                        field.placeholder
+                      }
+                      value={
+                        form[field.name] || ""
+                      }
+                      onChange={(e) =>
+                        handleChange(
+                          field.name,
+                          e.target.value
+                        )
+                      }
+                    />
+
+                  </div>
+
+                );
+              }
+
+
+              return (
+
+                <div
+                  className="formGroup"
+                  key={field.name}
+                >
+
+                  <label>
+                    {field.label ||
+                      field.name}
+                  </label>
+
+                  <input
+                    type={
+                      field.type || "text"
+                    }
+                    placeholder={
+                      field.placeholder
+                    }
+                    min={
+                      field.type === "number"
+                        ? 1
+                        : undefined
+                    }
+                    max={
+                      field.type === "number"
+                        ? 100
+                        : undefined
+                    }
+                    value={
+                      form[field.name] ?? ""
+                    }
+                    onChange={(e) => {
+                      let value =
+                        e.target.value;
+
+                      if (
+                        field.type === "number" &&
+                        value !== ""
+                      ) {
+                        value = Math.min(
+                          100,
+                          Math.max(
+                            1,
+                            Number(value)
+                          )
+                        );
+                      }
+
+                      handleChange(
+                        field.name,
+                        value
+                      );
+                    }}
+                  />
+
+                </div>
+
+              );
+            })}
+
+          </div>
+
+
+          {/* FORM ACTIONS */}
+
+          <div className="formActions">
+
+            {editingId && (
+
+              <button
+                type="button"
+                className="cancelBtn"
+                onClick={resetForm}
+                disabled={saving}
+              >
+                <X size={17} />
+                Cancel
+              </button>
+
+            )}
+
+            <button
+              type="button"
+              className="saveBtn"
+              onClick={saveItem}
+              disabled={saving}
+            >
+
+              <Plus size={17} />
+
+              {saving
+                ? "Saving..."
+                : editingId
+                ? "Update Item"
+                : "Add Item"}
+
+            </button>
+
+          </div>
+
+        </Card>
+
       </div>
+
+
+      {/* ITEMS SECTION */}
+
+      <div className="dataItemsSection">
+
+        <div className="dataItemsHeader">
+
+          <div>
+
+            <span className="sectionEyebrow">
+              YOUR INFORMATION
+            </span>
+
+            <h2>
+              {title}
+            </h2>
+
+          </div>
+
+          {!loading && (
+            <span className="itemCount">
+              {items.length}{" "}
+              {items.length === 1
+                ? "item"
+                : "items"}
+            </span>
+          )}
+
+        </div>
+
+
+        <div className="moduleGrid">
+
+          {loading ? (
+
+            <div className="emptyState loadingState">
+              Loading your information...
+            </div>
+
+          ) : items.length === 0 ? (
+
+            <div className="emptyState">
+
+              <div className="emptyStateIcon">
+                <Icon size={26} />
+              </div>
+
+              <h3>
+                No {title.toLowerCase()} yet
+              </h3>
+
+              <p>
+                Add your first item using
+                the form above.
+              </p>
+
+            </div>
+
+          ) : (
+
+            items.map((item) => (
+
+              <Card
+                key={item.id}
+                className="moduleCard dataItemCard"
+              >
+
+                <div className="dataCardTop">
+
+                  <div className="dataCardIcon">
+                    <Icon size={21} />
+                  </div>
+
+                  {item.status && (
+                    <span className="statusBadge">
+                      {item.status}
+                    </span>
+                  )}
+
+                </div>
+
+
+                <h3>
+                  {getItemTitle(item)}
+                </h3>
+
+
+                {item.professional_title && (
+                  <p className="itemHighlight">
+                    {item.professional_title}
+                  </p>
+                )}
+
+
+                {item.description && (
+                  <p className="cardDescription">
+                    {item.description}
+                  </p>
+                )}
+
+
+                {item.content && (
+                  <p className="cardDescription">
+                    {item.content}
+                  </p>
+                )}
+
+
+                {item.email && (
+                  <p className="itemDetail">
+                    {item.email}
+                  </p>
+                )}
+
+
+                {item.phone && (
+                  <p className="itemDetail">
+                    {item.phone}
+                  </p>
+                )}
+
+
+                {item.location && (
+                  <p className="itemDetail">
+                    {item.location}
+                  </p>
+                )}
+
+
+                {item.category && (
+                  <p className="itemMeta">
+                    Category:
+                    <span>
+                      {item.category}
+                    </span>
+                  </p>
+                )}
+
+
+                {item.organization && (
+                  <p className="itemMeta">
+                    Organization:
+                    <span>
+                      {item.organization}
+                    </span>
+                  </p>
+                )}
+
+
+                {item.level && (
+                  <p className="itemMeta">
+                    Level:
+                    <span>
+                      {item.level}
+                    </span>
+                  </p>
+                )}
+
+
+               {item.progress !== undefined && (
+  <p className="progressLine">
+    <span>Progress:</span>{" "}
+    <b>
+      {Math.min(
+        100,
+        Math.max(
+          0,
+          Number(item.progress) || 0
+        )
+      )}
+      %
+    </b>
+  </p>
+)}
+
+
+                <div className="itemCreated">
+
+                  <CalendarDays size={16} />
+
+                  <span>
+
+                    Created:{" "}
+
+                    {item.created_at
+                      ? new Date(
+                          item.created_at
+                        ).toLocaleDateString(
+                          "en-GB",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )
+                      : "Recently added"}
+
+                  </span>
+
+                </div>
+
+
+                <div className="cardActions">
+
+                  <button
+                    type="button"
+                    className="editBtn"
+                    onClick={() =>
+                      startEdit(item)
+                    }
+                  >
+
+                    <Pencil size={16} />
+                    Edit
+
+                  </button>
+
+                  <button
+                    type="button"
+                    className="deleteBtn"
+                    onClick={() =>
+                      deleteItem(item.id)
+                    }
+                  >
+
+                    <Trash2 size={16} />
+                    Delete
+
+                  </button>
+
+                </div>
+
+              </Card>
+
+            ))
+
+          )}
+
+        </div>
+
+      </div>
+
     </div>
   );
 }

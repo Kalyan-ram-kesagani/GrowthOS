@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import {
   FolderKanban,
   Code2,
@@ -5,11 +7,9 @@ import {
   GraduationCap,
   BriefcaseBusiness,
   BookOpen,
-  Target,
   Sparkles,
   ArrowUpRight,
   CheckCircle2,
-  TrendingUp,
   Plus,
   Bot,
 } from "lucide-react";
@@ -33,7 +33,34 @@ import {
   codingData,
 } from "../data/dashboard";
 
+
 function Dashboard({ stats, setPage }) {
+
+  const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+
+    fetch("http://127.0.0.1:8000/dashboard")
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Dashboard data:", data);
+        setDashboardData(data);
+      })
+      .catch((error) => {
+        console.error("Dashboard API error:", error);
+      });
+
+  }, []);
+
+
+  const backendStats = dashboardData || {
+    projects: { total: stats?.projects || 0 },
+    coding: { solved: stats?.leetcode || 0 },
+    certifications: { total: stats?.certifications || 0 },
+    applications: { total: 0 },
+  };
+
+
   return (
     <div className="page">
 
@@ -79,45 +106,50 @@ function Dashboard({ stats, setPage }) {
 
         <div className="hero3d">
           <div className="cube">
-            <span>AI</span>
-            <span>CODE</span>
-            <span>GOALS</span>
+            <span>skills</span>
+            <span>projects</span>
+            <span>Journal</span>
+            <span>Goals</span>
+            <span>Career</span>
+            <span>coding</span>
           </div>
         </div>
 
       </section>
 
+
       <div className="stats">
 
         <Stat
           icon={FolderKanban}
-          value={stats.projects}
+          value={backendStats.projects?.total || 0}
           label="Projects built"
           sub="Portfolio growing"
         />
 
         <Stat
           icon={Code2}
-          value={stats.leetcode}
+          value={backendStats.coding?.solved || 0}
           label="Problems solved"
           sub="LeetCode progress"
         />
 
         <Stat
           icon={Award}
-          value={stats.certifications}
+          value={backendStats.certifications?.total || 0}
           label="Certifications"
           sub="Verified learning"
         />
 
         <Stat
           icon={GraduationCap}
-          value={stats.cgpa}
+          value={stats?.cgpa || "0"}
           label="Current CGPA"
           sub="Academic score"
         />
 
       </div>
+
 
       <div className="grid2">
 
@@ -159,7 +191,9 @@ function Dashboard({ stats, setPage }) {
                       stopColor="var(--accent)"
                       stopOpacity="0"
                     />
+
                   </linearGradient>
+
                 </defs>
 
                 <XAxis
@@ -187,6 +221,7 @@ function Dashboard({ stats, setPage }) {
 
         </Card>
 
+
         <Card className="focus">
 
           <div className="cardHead">
@@ -201,6 +236,7 @@ function Dashboard({ stats, setPage }) {
             </button>
 
           </div>
+
 
           {[
             "Solve 2 LeetCode problems",
@@ -227,6 +263,7 @@ function Dashboard({ stats, setPage }) {
         </Card>
 
       </div>
+
 
       <div className="grid3">
 
@@ -261,9 +298,10 @@ function Dashboard({ stats, setPage }) {
 
           </div>
 
-          <b>{stats.streak} day streak 🔥</b>
+          <b>{stats?.streak || 0} day streak 🔥</b>
 
         </Card>
+
 
         <Card>
 
@@ -275,15 +313,15 @@ function Dashboard({ stats, setPage }) {
           <div className="pipeline">
 
             <span>
-              Applied <b>12</b>
+              Applied <b>{backendStats.applications?.total || 0}</b>
             </span>
 
             <span>
-              Review <b>4</b>
+              Review <b>0</b>
             </span>
 
             <span>
-              Interview <b>2</b>
+              Interview <b>0</b>
             </span>
 
           </div>
@@ -296,6 +334,7 @@ function Dashboard({ stats, setPage }) {
           </button>
 
         </Card>
+
 
         <Card>
 

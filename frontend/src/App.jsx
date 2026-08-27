@@ -1,5 +1,6 @@
+import "./style.css";
+import { useState } from "react";
 import { useAuth } from "./context/AuthContext";
-import React, { useState } from "react";
 
 import {
   UserRound,
@@ -22,6 +23,9 @@ import {
 import Dashboard from "./pages/Dashboard";
 import ProjectsPage from "./pages/Projects";
 import DataPage from "./pages/DataPage";
+import Career from "./pages/Career";
+import Analytics from "./pages/Analytics";
+import AIAssistant from "./pages/AIAssistant";
 
 import { nav } from "./config/navigation";
 import { initialStats } from "./data/dashboard";
@@ -286,20 +290,19 @@ function App() {
       <b>Professional Mode</b>
       <small>Building every day</small>
     </div>
-
-    <button
-      className="logoutBtn"
-      onClick={async () => {
-        const { error } = await signOut();
-
-        if (error) {
-          console.error("Logout failed:", error);
-        }
-      }}
-    >
-      Logout
-    </button>
-  </div>
+<button
+  className="logoutBtn"
+  onClick={async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  }}
+>
+  Logout
+</button>
+ </div>
 </aside>
 
       <main>
@@ -337,6 +340,12 @@ function App() {
           />
         ) : page === "Projects" ? (
           <ProjectsPage />
+        ) : page === "Career" ? (
+          <Career setPage={setPage} />
+        ) : page === "Analytics" ? (
+          <Analytics />
+        ) : page === "AI Assistant" ? (
+          <AIAssistant />
         ) : page === "Profile" ? (
           <DataPage
             type="profile"

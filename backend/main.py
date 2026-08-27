@@ -874,3 +874,594 @@ def delete_profile(profile_id: int):
     return {
         "message": "Profile deleted successfully"
     }
+
+# =========================
+# DASHBOARD
+# =========================
+
+@app.get("/dashboard")
+@app.get("/dashboard/stats")
+def get_dashboard():
+    db = SessionLocal()
+
+    try:
+        total_projects = db.query(models.Project).count()
+
+        completed_projects = (
+            db.query(models.Project)
+            .filter(models.Project.status == "Completed")
+            .count()
+        )
+
+        total_skills = db.query(models.Skill).count()
+
+        total_goals = db.query(models.Goal).count()
+
+        completed_goals = (
+            db.query(models.Goal)
+            .filter(models.Goal.status == "Completed")
+            .count()
+        )
+
+        total_applications = (
+            db.query(models.Application).count()
+        )
+
+        total_coding = (
+            db.query(models.CodingProgress).count()
+        )
+
+        solved_problems = (
+            db.query(models.CodingProgress)
+            .filter(models.CodingProgress.status == "Solved")
+            .count()
+        )
+
+        total_certifications = (
+            db.query(models.Certification).count()
+        )
+
+        return {
+            "projects": {
+                "total": total_projects,
+                "completed": completed_projects
+            },
+            "skills": {
+                "total": total_skills
+            },
+            "goals": {
+                "total": total_goals,
+                "completed": completed_goals
+            },
+            "applications": {
+                "total": total_applications
+            },
+            "coding": {
+                "total": total_coding,
+                "solved": solved_problems
+            },
+            "certifications": {
+                "total": total_certifications
+            }
+        }
+
+    finally:
+        db.close()
+
+# =========================
+# AI SKILL GAP ANALYSIS
+# =========================
+
+@app.get("/ai/skill-gap")
+def get_skill_gap():
+    db = SessionLocal()
+
+    try:
+        skills = db.query(models.Skill).all()
+
+        skill_data = []
+
+        for skill in skills:
+            level = getattr(skill, "level", "Beginner")
+
+            recommendations = {
+                "Beginner": "Focus on fundamentals and build small projects.",
+                "Intermediate": "Build advanced projects and strengthen practical experience.",
+                "Advanced": "Focus on specialization, system design, and real-world projects.",
+            }
+
+            skill_data.append({
+                "name": skill.name,
+                "level": level,
+                "recommendation": recommendations.get(
+                    level,
+                    "Continue improving this skill with practical projects."
+                )
+            })
+
+        if not skill_data:
+            return {
+                "message": "No skills found. Add skills to get your analysis.",
+                "skills": [],
+                "overall_recommendation": "Start by adding your technical and professional skills."
+            }
+
+        beginner_count = sum(
+            1 for skill in skill_data
+            if skill["level"] == "Beginner"
+        )
+
+        intermediate_count = sum(
+            1 for skill in skill_data
+            if skill["level"] == "Intermediate"
+        )
+
+        advanced_count = sum(
+            1 for skill in skill_data
+            if skill["level"] == "Advanced"
+        )
+
+        return {
+            "message": "Skill gap analysis completed successfully.",
+            "summary": {
+                "total_skills": len(skill_data),
+                "beginner": beginner_count,
+                "intermediate": intermediate_count,
+                "advanced": advanced_count
+            },
+            "skills": skill_data,
+            "overall_recommendation":
+                "Focus on improving your weakest skills first, then build projects that combine your strongest skills."
+        }
+
+    finally:
+        db.close()
+# ==============================
+# AI ASSISTANT - CAREER READINESS
+# ==============================
+
+@app.get("/ai/career-readiness")
+def get_career_readiness():
+    db = SessionLocal()
+
+    try:
+        # Get total data
+        total_skills = db.query(models.Skill).count()
+
+        advanced_skills = (
+            db.query(models.Skill)
+            .filter(models.Skill.level == "Advanced")
+            .count()
+        )
+
+        total_projects = db.query(models.Project).count()
+
+        completed_projects = (
+            db.query(models.Project)
+            .filter(models.Project.status == "Completed")
+            .count()
+        )
+
+        solved_problems = (
+            db.query(models.CodingProgress)
+            .filter(models.CodingProgress.status == "Solved")
+            .count()
+        )
+
+        total_certifications = (
+            db.query(models.Certification)
+            .count()
+        )
+
+        completed_goals = (
+            db.query(models.Goal)
+            .filter(models.Goal.status == "Completed")
+            .count()
+        )
+
+        # Calculate readiness score
+        score = 0
+
+        # Skills: maximum 30 points
+        score += min(total_skills * 3, 20)
+        score += min(advanced_skills * 5, 10)
+
+        # Projects: maximum 25 points
+        score += min(total_projects * 5, 10)
+        score += min(completed_projects * 7, 15)
+
+        # Coding: maximum 20 points
+        score += min(solved_problems * 2, 20)
+
+        # Certifications: maximum 15 points
+        score += min(total_certifications * 5, 15)
+
+        # Goals: maximum 10 points
+        score += min(completed_goals * 2, 10)
+
+        score = min(score, 100)
+
+        # Determine readiness level
+        if score >= 80:
+            readiness_level = "Excellent"
+            recommendation = (
+                "You are highly prepared. Focus on applying for opportunities "
+                "and building advanced projects."
+            )
+
+        elif score >= 60:
+            readiness_level = "Strong"
+            recommendation = (
+                "You have a strong foundation. Improve your projects and "
+                "continue strengthening your technical skills."
+            )
+
+        elif score >= 40:
+            readiness_level = "Developing"
+            recommendation = (
+                "You are making progress. Focus on completing projects, "
+                "solving coding problems, and improving your skills."
+            )
+
+        else:
+            readiness_level = "Getting Started"
+            recommendation = (
+                "Build your foundation by adding skills, completing projects, "
+                "practicing coding, and earning certifications."
+            )
+
+        return {
+            "score": score,
+            "level": readiness_level,
+            "recommendation": recommendation,
+
+            "breakdown": {
+                "skills": {
+                    "total": total_skills,
+                    "advanced": advanced_skills
+                },
+
+                "projects": {
+                    "total": total_projects,
+                    "completed": completed_projects
+                },
+
+                "coding": {
+                    "solved": solved_problems
+                },
+
+                "certifications": {
+                    "total": total_certifications
+                },
+
+                "goals": {
+                    "completed": completed_goals
+                }
+            }
+        }
+
+    finally:
+        db.close()
+
+# ============================
+# PROJECT IDEAS
+# ============================
+
+@app.get("/ai/project-ideas")
+def get_project_ideas():
+    db = SessionLocal()
+
+    try:
+        skills = db.query(models.Skill).all()
+
+        if not skills:
+            return {
+                "message": "No skills found. Add skills to get project ideas.",
+                "projects": []
+            }
+
+        skill_names = [skill.name for skill in skills]
+
+        projects = []
+
+        if any(
+            skill.lower() in [
+                "python",
+                "fastapi",
+                "django",
+                "flask"
+            ]
+            for skill in skill_names
+        ):
+            projects.append({
+                "title": "Smart Task Management System",
+                "description": "Build a task management application with authentication, progress tracking, and productivity analytics.",
+                "difficulty": "Intermediate",
+                "skills": [
+                    skill for skill in skill_names
+                    if skill.lower() in [
+                        "python",
+                        "fastapi",
+                        "django",
+                        "flask"
+                    ]
+                ]
+            })
+
+        if any(
+            skill.lower() in [
+                "react",
+                "javascript",
+                "html",
+                "css"
+            ]
+            for skill in skill_names
+        ):
+            projects.append({
+                "title": "Personal Portfolio Dashboard",
+                "description": "Create an interactive portfolio dashboard to showcase projects, skills, achievements, and career progress.",
+                "difficulty": "Beginner",
+                "skills": [
+                    skill for skill in skill_names
+                    if skill.lower() in [
+                        "react",
+                        "javascript",
+                        "html",
+                        "css"
+                    ]
+                ]
+            })
+
+        if any(
+            skill.lower() in [
+                "sql",
+                "mysql",
+                "postgresql",
+                "database"
+            ]
+            for skill in skill_names
+        ):
+            projects.append({
+                "title": "Student Analytics Platform",
+                "description": "Build a system that stores student data and generates useful analytics, reports, and performance insights.",
+                "difficulty": "Intermediate",
+                "skills": [
+                    skill for skill in skill_names
+                    if skill.lower() in [
+                        "sql",
+                        "mysql",
+                        "postgresql",
+                        "database"
+                    ]
+                ]
+            })
+
+        if not projects:
+            projects.append({
+                "title": "Personal Growth Tracker",
+                "description": "Build an application that helps users track skills, goals, projects, and learning progress.",
+                "difficulty": "Beginner",
+                "skills": skill_names
+            })
+
+        return {
+            "message": "Project ideas generated successfully.",
+            "based_on_skills": skill_names,
+            "projects": projects
+        }
+
+    finally:
+        db.close()
+
+@app.get("/api/weekly-insights")
+def get_weekly_insights():
+    db = SessionLocal()
+
+    try:
+        total_projects = (
+            db.query(models.Project).count()
+        )
+
+        completed_projects = (
+            db.query(models.Project)
+            .filter(models.Project.status == "Completed")
+            .count()
+        )
+
+        total_skills = (
+            db.query(models.Skill).count()
+        )
+
+        advanced_skills = (
+            db.query(models.Skill)
+            .filter(models.Skill.level == "Advanced")
+            .count()
+        )
+
+        total_goals = (
+            db.query(models.Goal).count()
+        )
+
+        completed_goals = (
+            db.query(models.Goal)
+            .filter(models.Goal.status == "Completed")
+            .count()
+        )
+
+        total_applications = (
+            db.query(models.Application).count()
+        )
+
+        total_coding = (
+            db.query(models.CodingProgress).count()
+        )
+
+        solved_problems = (
+            db.query(models.CodingProgress)
+            .filter(models.CodingProgress.status == "Solved")
+            .count()
+        )
+
+        total_certifications = (
+            db.query(models.Certification).count()
+        )
+
+        activity_score = 0
+
+        activity_score += min(total_skills * 10, 25)
+        activity_score += min(completed_projects * 15, 25)
+        activity_score += min(completed_goals * 10, 20)
+        activity_score += min(solved_problems * 5, 15)
+        activity_score += min(total_certifications * 5, 15)
+
+        if activity_score >= 80:
+            performance = "Excellent"
+            recommendation = (
+                "Great progress! Keep building on your current momentum "
+                "and focus on larger projects and career opportunities."
+            )
+
+        elif activity_score >= 60:
+            performance = "Good"
+            recommendation = (
+                "You are making good progress. Focus on completing more "
+                "projects and strengthening your weaker skills."
+            )
+
+        elif activity_score >= 30:
+            performance = "Growing"
+            recommendation = (
+                "You are making progress, but consistency can improve. "
+                "Set weekly goals and complete small milestones."
+            )
+
+        else:
+            performance = "Getting Started"
+            recommendation = (
+                "Start by adding skills, goals, projects, and coding "
+                "progress to build your GrowthOS profile."
+            )
+
+        return {
+            "message": "Weekly insights generated successfully.",
+            "activity_score": activity_score,
+            "performance": performance,
+            "recommendation": recommendation,
+            "breakdown": {
+                "skills": {
+                    "total": total_skills,
+                    "advanced": advanced_skills
+                },
+                "projects": {
+                    "total": total_projects,
+                    "completed": completed_projects
+                },
+                "goals": {
+                    "total": total_goals,
+                    "completed": completed_goals
+                },
+                "coding": {
+                    "total": total_coding,
+                    "solved": solved_problems
+                },
+                "certifications": {
+                    "total": total_certifications
+                },
+                "applications": {
+                    "total": total_applications
+                }
+            }
+        }
+
+    finally:
+        db.close()
+
+@app.get("/api/career-readiness")
+def get_career_readiness():
+    db = SessionLocal()
+
+    try:
+        total_skills = db.query(models.Skill).count()
+
+        advanced_skills = (
+            db.query(models.Skill)
+            .filter(models.Skill.level == "Advanced")
+            .count()
+        )
+
+        total_projects = db.query(models.Project).count()
+
+        completed_projects = (
+            db.query(models.Project)
+            .filter(models.Project.status == "Completed")
+            .count()
+        )
+
+        solved_problems = (
+            db.query(models.CodingProgress)
+            .filter(models.CodingProgress.status == "Solved")
+            .count()
+        )
+
+        total_certifications = (
+            db.query(models.Certification)
+            .count()
+        )
+
+        completed_goals = (
+            db.query(models.Goal)
+            .filter(models.Goal.status == "Completed")
+            .count()
+        )
+
+        score = 0
+
+        score += min(total_skills * 5, 30)
+        score += min(advanced_skills * 5, 20)
+        score += min(completed_projects * 10, 20)
+        score += min(solved_problems * 2, 10)
+        score += min(total_certifications * 5, 10)
+        score += min(completed_goals * 2, 10)
+
+        score = min(score, 100)
+
+        if score >= 80:
+            readiness_level = "Excellent"
+            recommendation = "You are highly prepared. Focus on applying for strong career opportunities."
+        elif score >= 60:
+            readiness_level = "Good"
+            recommendation = "You have a solid foundation. Strengthen your projects and advanced skills."
+        elif score >= 40:
+            readiness_level = "Developing"
+            recommendation = "Keep improving your skills, projects, and professional profile."
+        else:
+            readiness_level = "Beginner"
+            recommendation = "Start by building skills, completing projects, and setting clear career goals."
+
+        return {
+            "score": score,
+            "level": readiness_level,
+            "recommendation": recommendation,
+            "breakdown": {
+                "skills": {
+                    "total": total_skills,
+                    "advanced": advanced_skills
+                },
+                "projects": {
+                    "total": total_projects,
+                    "completed": completed_projects
+                },
+                "coding": {
+                    "solved": solved_problems
+                },
+                "certifications": {
+                    "total": total_certifications
+                },
+                "goals": {
+                    "completed": completed_goals
+                }
+            }
+        }
+
+    finally:
+        db.close()
