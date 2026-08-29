@@ -221,17 +221,7 @@ function ProfilePage() {
                 </div>
               </div>
 
-              {hasProfile && (
-                <button
-                  type="button"
-                  className="closeEditBtn"
-                  onClick={cancelEdit}
-                  disabled={saving}
-                  title="Cancel editing"
-                >
-                  <X size={18} />
-                </button>
-              )}
+             
             </div>
 
             <div className="avatarUploadSection">
@@ -343,6 +333,15 @@ function ProfilePage() {
 
           <Card className="profileCard">
 
+            <button
+              type="button"
+              className="profileEditBtn"
+              onClick={startEdit}
+              title="Edit profile"
+            >
+              <Pencil size={15} />
+            </button>
+
             <div className="profileCardHeader">
 
               <div className="profileAvatar">
@@ -361,14 +360,6 @@ function ProfilePage() {
                 <h2>{profile.full_name || "No name set"}</h2>
               </div>
 
-              <button
-                type="button"
-                className="profileEditBtn"
-                onClick={startEdit}
-                title="Edit profile"
-              >
-                <Pencil size={15} />
-              </button>
             </div>
 
             {profile.bio && (
