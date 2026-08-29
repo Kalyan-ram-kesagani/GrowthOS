@@ -23,6 +23,7 @@ import {
 import Dashboard from "./pages/Dashboard";
 import ProjectsPage from "./pages/Projects";
 import DataPage from "./pages/DataPage";
+import ProfilePage from "./pages/ProfilePage";
 import Career from "./pages/Career";
 import Analytics from "./pages/Analytics";
 import AIAssistant from "./pages/AIAssistant";
@@ -347,52 +348,7 @@ function App() {
         ) : page === "AI Assistant" ? (
           <AIAssistant />
         ) : page === "Profile" ? (
-          <DataPage
-            type="profile"
-            title="Profile / Professional Information"
-            description="Manage your professional identity and portfolio information."
-            icon={UserRound}
-            fields={[
-              {
-                name: "full_name",
-                placeholder: "Full name",
-              },
-              {
-                name: "professional_title",
-                placeholder: "Professional title",
-              },
-              {
-                name: "email",
-                type: "email",
-                placeholder: "Email address",
-              },
-              {
-                name: "phone",
-                type: "tel",
-                placeholder: "Phone number",
-              },
-              {
-                name: "location",
-                placeholder: "Location",
-              },
-              {
-                name: "linkedin",
-                type: "url",
-                placeholder: "LinkedIn profile URL",
-              },
-              {
-                name: "github",
-                type: "url",
-                placeholder: "GitHub profile URL",
-              },
-              {
-                name: "bio",
-                type: "textarea",
-                placeholder:
-                  "Write a short professional bio...",
-              },
-            ]}
-          />
+          <ProfilePage />
         ) : page === "Skills & AI" ? (
           <DataPage
             type="skills"

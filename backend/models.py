@@ -139,6 +139,7 @@ class Profile(Base):
     linkedin = Column(String, nullable=True)
     github = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
+    avatar_url = Column(String, nullable=True)
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),

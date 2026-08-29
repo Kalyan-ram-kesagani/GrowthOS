@@ -66,4 +66,29 @@ export const api = {
       method: "DELETE",
     });
   },
+
+  async upload(file) {
+    const token = getAccessToken();
+    if (!token) {
+      throw new Error("Not authenticated. Please log in.");
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Upload failed with status ${response.status}`);
+    }
+
+    return response.json();
+  },
 };

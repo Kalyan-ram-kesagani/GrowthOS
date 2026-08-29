@@ -1,10 +1,12 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 import bcrypt
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -50,6 +52,11 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 # =========================
 # AUTH HELPERS
@@ -1116,6 +1123,7 @@ class ProfileCreate(BaseModel):
     linkedin: str | None = None
     github: str | None = None
     bio: str | None = None
+    avatar_url: str | None = None
 
 
 class ProfileUpdate(BaseModel):
@@ -1127,6 +1135,7 @@ class ProfileUpdate(BaseModel):
     linkedin: str | None = None
     github: str | None = None
     bio: str | None = None
+    avatar_url: str | None = None
 
 
 @app.get("/profile")
@@ -1167,6 +1176,17 @@ def create_profile(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    existing = (
+        db.query(models.Profile)
+        .filter(models.Profile.user_id == current_user.id)
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Profile already exists. Use PUT to update it.",
+        )
+
     new_profile = models.Profile(
         user_id=current_user.id,
         full_name=profile.full_name,
@@ -1177,6 +1197,7 @@ def create_profile(
         linkedin=profile.linkedin,
         github=profile.github,
         bio=profile.bio,
+        avatar_url=profile.avatar_url,
     )
     db.add(new_profile)
     db.commit()
@@ -1210,6 +1231,7 @@ def update_profile(
     profile.linkedin = updated_profile.linkedin
     profile.github = updated_profile.github
     profile.bio = updated_profile.bio
+    profile.avatar_url = updated_profile.avatar_url
 
     db.commit()
     db.refresh(profile)
@@ -1236,6 +1258,43 @@ def delete_profile(
     db.delete(profile)
     db.commit()
     return {"message": "Profile deleted successfully"}
+
+
+# =========================
+# FILE UPLOAD
+# =========================
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+
+@app.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+):
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type {ext} not allowed. Use: {', '.join(ALLOWED_EXTENSIONS)}",
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail="File too large. Maximum size is 5MB.",
+        )
+
+    filename = f"{current_user.id}_{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(UPLOADS_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    url = f"/uploads/{filename}"
+    return {"url": url}
 
 
 # =========================
