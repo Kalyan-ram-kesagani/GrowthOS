@@ -6,20 +6,23 @@ import {
   Pencil,
   Trash2,
   Calendar,
+  ExternalLink,
 } from "lucide-react";
 
 import Card from "../components/Card";
 import { api } from "../services/api";
+import { useToast } from "../components/Toast";
 import "../style.css";
 
 function ProjectsPage() {
+  const { addToast } = useToast();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("In Progress");
+  const [link, setLink] = useState("");
 
   const [editingId, setEditingId] = useState(null);
 
@@ -45,19 +48,21 @@ function ProjectsPage() {
 
   const addProject = async () => {
     if (!title.trim()) {
-      alert("Please enter a project title");
+      addToast("Please enter a project title", "error");
       return;
     }
 
     try {
       setSaving(true);
-      await api.post("/projects", { title, description, status });
+      await api.post("/projects", { title, description, link });
       setTitle("");
       setDescription("");
-      setStatus("In Progress");
+      setLink("");
+      addToast("Project added successfully.", "success");
       await loadProjects();
     } catch (error) {
       console.error("Error creating project:", error);
+      addToast("Failed to create project.", "error");
     } finally {
       setSaving(false);
     }
@@ -67,40 +72,58 @@ function ProjectsPage() {
     setEditingId(project.id);
     setTitle(project.title || "");
     setDescription(project.description || "");
-    setStatus(project.status || "In Progress");
+    setLink(project.link || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const updateProject = async () => {
     if (!title.trim()) {
-      alert("Please enter a project title");
+      addToast("Please enter a project title", "error");
       return;
     }
 
     try {
       setSaving(true);
-      await api.put(`/projects/${editingId}`, { title, description, status });
+      await api.put(`/projects/${editingId}`, { title, description, link });
       setEditingId(null);
       setTitle("");
       setDescription("");
-      setStatus("In Progress");
+      setLink("");
+      addToast("Project updated successfully.", "success");
       await loadProjects();
     } catch (error) {
       console.error("Error updating project:", error);
+      addToast("Failed to update project.", "error");
     } finally {
       setSaving(false);
     }
   };
 
   const deleteProject = async (id) => {
-    const confirmed = window.confirm("Delete this project?");
-    if (!confirmed) return;
+    const deletedProject = projects.find((p) => p.id === id);
+    const label = deletedProject?.title || "Project";
 
     try {
       await api.delete(`/projects/${id}`);
       await loadProjects();
+
+      addToast(`"${label}" moved to recycle bin`, "info", {
+        duration: 6000,
+        action: {
+          onClick: async () => {
+            try {
+              await api.post(`/recycle-bin/projects/${id}/restore`);
+              await loadProjects();
+              addToast(`"${label}" restored successfully`, "success");
+            } catch (err) {
+              addToast("Failed to restore project.", "error");
+            }
+          },
+        },
+      });
     } catch (error) {
       console.error("Error deleting project:", error);
+      addToast("Failed to delete project.", "error");
     }
   };
 
@@ -108,7 +131,7 @@ function ProjectsPage() {
     setEditingId(null);
     setTitle("");
     setDescription("");
-    setStatus("In Progress");
+    setLink("");
   };
 
   return (
@@ -174,19 +197,17 @@ function ProjectsPage() {
           <div className="formField">
 
             <label>
-              Status
+              Project Link
             </label>
 
-            <select
-              value={status}
+            <input
+              type="url"
+              placeholder="https://github.com/..."
+              value={link}
               onChange={(e) =>
-                setStatus(e.target.value)
+                setLink(e.target.value)
               }
-            >
-              <option>In Progress</option>
-              <option>Completed</option>
-              <option>Planned</option>
-            </select>
+            />
 
           </div>
 
@@ -280,10 +301,17 @@ function ProjectsPage() {
                   "No description provided"}
               </p>
 
-              <p className="projectStatus">
-                Status:{" "}
-                {project.status}
-              </p>
+              {project.link && (
+                <a
+                  href={project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="projectLink"
+                >
+                  <ExternalLink size={14} />
+                  View Project
+                </a>
+              )}
 
               <p className="createdDate">
 

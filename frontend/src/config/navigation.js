@@ -11,12 +11,13 @@ import {
   Target,
   BarChart3,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 export const nav = [
   ["Dashboard", LayoutDashboard],
   ["Profile", UserRound],
-  ["Skills & AI", BrainCircuit],
+  ["Skills", BrainCircuit],
   ["Projects", FolderKanban],
   ["Coding", Code2],
   ["Certificates", Award],
@@ -27,4 +28,5 @@ export const nav = [
   ["Goals", Target],
   ["Analytics", BarChart3],
   ["AI Assistant", Sparkles],
+  ["Recycle Bin", Trash2],
 ];

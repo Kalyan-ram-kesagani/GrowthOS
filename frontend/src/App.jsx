@@ -27,6 +27,7 @@ import ProfilePage from "./pages/ProfilePage";
 import Career from "./pages/Career";
 import Analytics from "./pages/Analytics";
 import AIAssistant from "./pages/AIAssistant";
+import RecycleBinPage from "./pages/RecycleBin";
 
 import { nav } from "./config/navigation";
 import { initialStats } from "./data/dashboard";
@@ -44,9 +45,9 @@ const modules = {
     ],
   },
 
-  "Skills & AI": {
+  "Skills": {
     icon: BrainCircuit,
-    title: "Skills & AI",
+    title: "Skills",
     desc: "Track technical skills, AI tools and learning paths.",
     cards: [
       "Python 78%",
@@ -232,22 +233,23 @@ function App() {
   const [stats, setStats] = useState(initialStats);
 
   const addItem = (name, item) => {
-    if (name === "Projects") {
-      setStats((current) => ({
-        ...current,
-        projects: current.projects + 1,
-      }));
-    }
+    const pageMap = {
+      "Skills & AI": "Skills",
+      "Projects": "Projects",
+      "Certificates": "Certificates",
+      "Goals": "Goals",
+      "Coding": "Coding",
+      "Academics": "Academics",
+      "Journal": "Journal",
+      "Career": "Career",
+      "Analytics": "Analytics",
+      "AI Assistant": "AI Assistant",
+      "Profile": "Profile",
+      "Recycle Bin": "Recycle Bin",
+    };
 
-    if (name === "Certificates") {
-      setStats((current) => ({
-        ...current,
-        certifications:
-          current.certifications + 1,
-      }));
-    }
-
-    alert(`${item} module is ready.`);
+    const targetPage = pageMap[name] || name;
+    setPage(targetPage);
   };
 
   return (
@@ -349,10 +351,10 @@ function App() {
           <AIAssistant />
         ) : page === "Profile" ? (
           <ProfilePage />
-        ) : page === "Skills & AI" ? (
+        ) : page === "Skills" ? (
           <DataPage
             type="skills"
-            title="Skills & AI"
+            title="Skills"
             description="Track your technical skills and learning progress."
             icon={BrainCircuit}
             fields={[
@@ -361,20 +363,9 @@ function App() {
                 placeholder: "Skill name",
               },
               {
-                name: "level",
-                type: "select",
-                default: "Beginner",
-                options: [
-                  "Beginner",
-                  "Intermediate",
-                  "Advanced",
-                ],
-              },
-              {
-                name: "progress",
-                type: "number",
-                placeholder:
-                  "Progress percentage",
+                name: "description",
+                type: "textarea",
+                placeholder: "Describe this skill...",
               },
             ]}
           />
@@ -396,14 +387,10 @@ function App() {
                   "Organization",
               },
               {
-                name: "status",
-                type: "select",
-                default: "Completed",
-                options: [
-                  "Completed",
-                  "In Progress",
-                  "Planned",
-                ],
+                name: "image_url",
+                type: "file",
+                label: "Upload Certificate",
+                buttonText: "Upload Certificate",
               },
             ]}
           />
@@ -619,6 +606,8 @@ function App() {
               },
             ]}
           />
+        ) : page === "Recycle Bin" ? (
+          <RecycleBinPage />
         ) : (
           <ModulePage
             name={page}

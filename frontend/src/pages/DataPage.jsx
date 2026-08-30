@@ -6,10 +6,15 @@ import {
   CalendarDays,
   Plus,
   X,
+  Upload,
 } from "lucide-react";
 
 import Card from "../components/Card";
 import { api } from "../services/api";
+import { useToast } from "../components/Toast";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function DataPage({
   type,
@@ -18,6 +23,7 @@ function DataPage({
   icon: Icon,
   fields,
 }) {
+  const { addToast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({});
@@ -103,9 +109,7 @@ function DataPage({
         error
       );
 
-      alert(
-        "Something went wrong. Please try again."
-      );
+      addToast("Something went wrong. Please try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -129,33 +133,37 @@ function DataPage({
   };
 
   const deleteItem = async (id) => {
-    const confirmed = window.confirm(
-      "Delete this item?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const deletedItem = items.find((i) => i.id === id);
+    const label = deletedItem
+      ? deletedItem.name || deletedItem.title || deletedItem.company || "Item"
+      : "Item";
 
     try {
-      await api.delete(
-        `/${type}/${id}`
-      );
+      await api.delete(`/${type}/${id}`);
 
       if (editingId === id) {
         resetForm();
       }
 
       await loadItems();
-    } catch (error) {
-      console.error(
-        `Error deleting ${type}:`,
-        error
-      );
 
-      alert(
-        "Failed to delete this item."
-      );
+      addToast(`"${label}" moved to recycle bin`, "info", {
+        duration: 6000,
+        action: {
+          onClick: async () => {
+            try {
+              await api.post(`/recycle-bin/${type}/${id}/restore`);
+              await loadItems();
+              addToast(`"${label}" restored successfully`, "success");
+            } catch (err) {
+              addToast("Failed to restore item.", "error");
+            }
+          },
+        },
+      });
+    } catch (error) {
+      console.error(`Error deleting ${type}:`, error);
+      addToast("Failed to delete this item.", "error");
     }
   };
 
@@ -323,6 +331,62 @@ function DataPage({
                         )
                       }
                     />
+
+                  </div>
+
+                );
+              }
+
+
+              if (field.type === "file") {
+                const imageUrl = form[field.name] || "";
+                return (
+
+                  <div
+                    className="formGroup fullWidth"
+                    key={field.name}
+                  >
+
+                    <label>
+                      {field.label ||
+                        field.name}
+                    </label>
+
+                    <div className="fileUploadArea">
+
+                      {imageUrl && (
+                        <div className="filePreview">
+                          <img
+                            src={imageUrl.startsWith("http") ? imageUrl : `${API_BASE_URL}${imageUrl}`}
+                            alt="Preview"
+                            className="filePreviewImage"
+                          />
+                        </div>
+                      )}
+
+                      <label className="fileUploadBtn">
+                        <Upload size={16} />
+                        {field.buttonText || "Upload File"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="fileInput"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const result = await api.upload(file);
+                              handleChange(field.name, result.url);
+                              addToast("File uploaded successfully.", "success");
+                            } catch (err) {
+                              console.error("Upload failed:", err);
+                              addToast("Failed to upload file. Please try again.", "error");
+                            }
+                          }}
+                        />
+                      </label>
+
+                    </div>
 
                   </div>
 
@@ -516,6 +580,16 @@ function DataPage({
 
                 </div>
 
+                {item.image_url && (
+                  <div className="certImageContainer">
+                    <img
+                      src={item.image_url.startsWith("http") ? item.image_url : `${API_BASE_URL}${item.image_url}`}
+                      alt={getItemTitle(item)}
+                      className="certImage"
+                    />
+                  </div>
+                )}
+
 
                 <h3>
                   {getItemTitle(item)}
@@ -584,31 +658,13 @@ function DataPage({
                 )}
 
 
-                {item.level && (
+                {item.description && (
                   <p className="itemMeta">
-                    Level:
                     <span>
-                      {item.level}
+                      {item.description}
                     </span>
                   </p>
                 )}
-
-
-               {item.progress !== undefined && (
-  <p className="progressLine">
-    <span>Progress:</span>{" "}
-    <b>
-      {Math.min(
-        100,
-        Math.max(
-          0,
-          Number(item.progress) || 0
-        )
-      )}
-      %
-    </b>
-  </p>
-)}
 
 
                 <div className="itemCreated">

@@ -24,11 +24,12 @@ class Project(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(String, default="In Progress")
+    link = Column(String, nullable=True)
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class Skill(Base):
@@ -37,8 +38,8 @@ class Skill(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
-    level = Column(String, default="Beginner")
-    progress = Column(Integer, default=0)
+    description = Column(Text, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class Certification(Base):
@@ -48,7 +49,8 @@ class Certification(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     organization = Column(String, nullable=True)
-    status = Column(String, default="Completed")
+    image_url = Column(String, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class Goal(Base):
@@ -59,6 +61,7 @@ class Goal(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     status = Column(String, default="Active")
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class JournalEntry(Base):
@@ -73,6 +76,7 @@ class JournalEntry(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class CodingProgress(Base):
@@ -89,6 +93,7 @@ class CodingProgress(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class Application(Base):
@@ -106,6 +111,7 @@ class Application(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class AcademicInfo(Base):
@@ -124,6 +130,7 @@ class AcademicInfo(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class Profile(Base):

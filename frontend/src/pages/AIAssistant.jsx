@@ -413,21 +413,6 @@ function AIAssistant() {
                 {analysis.summary.total_skills}
               </p>
 
-              <p>
-                <b>Beginner:</b>{" "}
-                {analysis.summary.beginner}
-              </p>
-
-              <p>
-                <b>Intermediate:</b>{" "}
-                {analysis.summary.intermediate}
-              </p>
-
-              <p>
-                <b>Advanced:</b>{" "}
-                {analysis.summary.advanced}
-              </p>
-
             </div>
 
           )}
@@ -452,14 +437,11 @@ function AIAssistant() {
                     {skill.name}
                   </h3>
 
-                  <p>
-                    <b>Level:</b>{" "}
-                    {skill.level}
-                  </p>
-
-                  <p>
-                    {skill.recommendation}
-                  </p>
+                  {skill.description && (
+                    <p>
+                      {skill.description}
+                    </p>
+                  )}
 
                 </Card>
 

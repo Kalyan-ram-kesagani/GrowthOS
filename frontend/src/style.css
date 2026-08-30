@@ -1340,6 +1340,38 @@ header {
   font-size: 12px;
 }
 
+.projectLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  width: fit-content;
+
+  padding: 7px 10px;
+
+  color: #aaa2ff !important;
+
+  background:
+    rgba(124, 108, 255, 0.09);
+
+  border:
+    1px solid
+    rgba(124, 108, 255, 0.16);
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  text-decoration: none;
+
+  transition: background 0.2s;
+}
+
+.projectLink:hover {
+  background:
+    rgba(124, 108, 255, 0.18);
+}
+
 .createdDate {
   display: flex;
   align-items: center;
@@ -2629,6 +2661,74 @@ button {
 
 
 /* =========================================================
+   FILE UPLOAD
+========================================================= */
+
+.fileUploadArea {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filePreview {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.filePreviewImage {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.fileUploadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 18px;
+
+  background: rgba(129, 113, 255, 0.1);
+  border: 1px dashed rgba(129, 113, 255, 0.35);
+  border-radius: 10px;
+
+  color: #aaa2ff;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.fileUploadBtn:hover {
+  background: rgba(129, 113, 255, 0.18);
+}
+
+.fileInput {
+  display: none;
+}
+
+
+/* =========================================================
+   CERTIFICATION IMAGE
+========================================================= */
+
+.certImageContainer {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.certImage {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+
+/* =========================================================
    CENTER ADD / UPDATE BUTTON
 ========================================================= */
 
@@ -3452,7 +3552,7 @@ select option:focus {
   justify-content: center !important;
 }
 
-/* Skills & AI Add Item button */
+/* Skills  Add Item button */
 .addItemBtn {
   display: flex !important;
   align-items: center !important;
@@ -4314,4 +4414,259 @@ select option:focus {
     height: 150px;
   }
 
+}
+
+
+/* =====================================================
+   TOAST NOTIFICATIONS
+   ===================================================== */
+
+.toastContainer {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 280px;
+  max-width: 400px;
+  padding: 14px 16px;
+
+  background: rgba(22, 27, 44, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+
+  color: #e0e0e0;
+  font-size: 13.5px;
+  font-weight: 500;
+
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(16px);
+
+  pointer-events: all;
+  animation: toastIn 0.3s ease;
+}
+
+.toastSuccess {
+  border-color: rgba(72, 199, 142, 0.3);
+}
+
+.toastSuccess svg {
+  color: #48c78e;
+  flex-shrink: 0;
+}
+
+.toastError {
+  border-color: rgba(255, 99, 99, 0.3);
+}
+
+.toastError svg {
+  color: #ff6363;
+  flex-shrink: 0;
+}
+
+.toastInfo {
+  border-color: rgba(129, 113, 255, 0.3);
+}
+
+.toastInfo svg {
+  color: #8171ff;
+  flex-shrink: 0;
+}
+
+.toastClose {
+  margin-left: auto;
+  padding: 4px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.toastClose:hover {
+  color: #aaa;
+}
+
+.toastAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 5px 12px;
+  margin-left: 8px;
+
+  background: rgba(129, 113, 255, 0.15);
+  border: 1px solid rgba(129, 113, 255, 0.3);
+  border-radius: 8px;
+
+  color: #b7a8ff;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.toastAction:hover {
+  background: rgba(129, 113, 255, 0.3);
+}
+
+
+/* =====================================================
+   RECYCLE BIN
+   ===================================================== */
+
+.clearAllBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 9px 16px;
+
+  background: rgba(255, 99, 99, 0.1);
+  border: 1px solid rgba(255, 99, 99, 0.2);
+  border-radius: 10px;
+
+  color: #ff6363;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clearAllBtn:hover {
+  background: rgba(255, 99, 99, 0.2);
+}
+
+.emptyRecycleBin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  padding: 60px 20px;
+
+  color: #555;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.emptyRecycleBin svg {
+  color: #333;
+}
+
+.emptyRecycleBin h3 {
+  color: #888;
+}
+
+.emptyRecycleBin p {
+  color: #555;
+  font-size: 14px;
+}
+
+.recycleCard {
+  position: relative;
+}
+
+.recycleCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 10px;
+}
+
+.recycleTypeBadge {
+  padding: 4px 10px;
+
+  background: rgba(255, 99, 99, 0.1);
+  border: 1px solid rgba(255, 99, 99, 0.15);
+  border-radius: 6px;
+
+  color: #ff8a8a;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.recycleDate {
+  color: #555;
+  font-size: 11px;
+}
+
+.recycleActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.restoreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 14px;
+
+  background: rgba(72, 199, 142, 0.1);
+  border: 1px solid rgba(72, 199, 142, 0.2);
+  border-radius: 8px;
+
+  color: #48c78e;
+  font-size: 12px;
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.restoreBtn:hover {
+  background: rgba(72, 199, 142, 0.2);
+}
+
+.permanentDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 14px;
+
+  background: rgba(255, 99, 99, 0.1);
+  border: 1px solid rgba(255, 99, 99, 0.2);
+  border-radius: 8px;
+
+  color: #ff6363;
+  font-size: 12px;
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.permanentDeleteBtn:hover {
+  background: rgba(255, 99, 99, 0.2);
+}
+
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }

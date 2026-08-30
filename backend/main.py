@@ -4,18 +4,40 @@ from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 import bcrypt
-from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+from sqlalchemy import text, inspect
 
 import models
 from database import engine, SessionLocal, Base
 
 load_dotenv()
+
+
+def migrate_add_deleted_at():
+    inspector = inspect(engine)
+    tables_needing_col = [
+        "projects", "skills", "certifications", "goals",
+        "journal_entries", "coding_progress", "applications", "academic_info",
+    ]
+    with engine.connect() as conn:
+        for table in tables_needing_col:
+            if table in inspector.get_table_names():
+                cols = [c["name"] for c in inspector.get_columns(table)]
+                if "deleted_at" not in cols:
+                    conn.execute(text(f'ALTER TABLE {table} ADD COLUMN deleted_at DATETIME'))
+                    conn.commit()
+
+
+Base.metadata.create_all(bind=engine)
+migrate_add_deleted_at()
 
 # =========================
 # CONFIG
@@ -51,7 +73,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        )
+
 
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -214,13 +243,13 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 class ProjectCreate(BaseModel):
     title: str
     description: str | None = None
-    status: str = "In Progress"
+    link: str | None = None
 
 
 class ProjectUpdate(BaseModel):
     title: str
     description: str | None = None
-    status: str
+    link: str | None = None
 
 
 @app.get("/projects")
@@ -230,7 +259,7 @@ def get_projects(
 ):
     return (
         db.query(models.Project)
-        .filter(models.Project.user_id == current_user.id)
+        .filter(models.Project.user_id == current_user.id, models.Project.deleted_at == None)
         .all()
     )
 
@@ -246,6 +275,7 @@ def get_project(
         .filter(
             models.Project.id == project_id,
             models.Project.user_id == current_user.id,
+            models.Project.deleted_at == None,
         )
         .first()
     )
@@ -264,7 +294,7 @@ def create_project(
         user_id=current_user.id,
         title=project.title,
         description=project.description,
-        status=project.status,
+        link=project.link,
     )
     db.add(new_project)
     db.commit()
@@ -292,7 +322,7 @@ def update_project(
 
     project.title = updated_project.title
     project.description = updated_project.description
-    project.status = updated_project.status
+    project.link = updated_project.link
 
     db.commit()
     db.refresh(project)
@@ -316,9 +346,9 @@ def delete_project(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    db.delete(project)
+    project.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Project deleted successfully"}
+    return {"message": "Project deleted successfully", "id": project_id}
 
 
 # =========================
@@ -328,14 +358,12 @@ def delete_project(
 
 class SkillCreate(BaseModel):
     name: str
-    level: str = "Beginner"
-    progress: int = 0
+    description: str = ""
 
 
 class SkillUpdate(BaseModel):
     name: str
-    level: str
-    progress: int
+    description: str = ""
 
 
 @app.get("/skills")
@@ -345,7 +373,7 @@ def get_skills(
 ):
     return (
         db.query(models.Skill)
-        .filter(models.Skill.user_id == current_user.id)
+        .filter(models.Skill.user_id == current_user.id, models.Skill.deleted_at == None)
         .all()
     )
 
@@ -359,8 +387,7 @@ def create_skill(
     new_skill = models.Skill(
         user_id=current_user.id,
         name=skill.name,
-        level=skill.level,
-        progress=skill.progress,
+        description=skill.description,
     )
     db.add(new_skill)
     db.commit()
@@ -380,6 +407,7 @@ def update_skill(
         .filter(
             models.Skill.id == skill_id,
             models.Skill.user_id == current_user.id,
+            models.Skill.deleted_at == None,
         )
         .first()
     )
@@ -387,8 +415,7 @@ def update_skill(
         raise HTTPException(status_code=404, detail="Skill not found")
 
     skill.name = updated_skill.name
-    skill.level = updated_skill.level
-    skill.progress = updated_skill.progress
+    skill.description = updated_skill.description
 
     db.commit()
     db.refresh(skill)
@@ -412,9 +439,9 @@ def delete_skill(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    db.delete(skill)
+    skill.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Skill deleted successfully"}
+    return {"message": "Skill deleted successfully", "id": skill_id}
 
 
 # =========================
@@ -425,13 +452,13 @@ def delete_skill(
 class CertificationCreate(BaseModel):
     name: str
     organization: str | None = None
-    status: str = "Completed"
+    image_url: str | None = None
 
 
 class CertificationUpdate(BaseModel):
     name: str
     organization: str | None = None
-    status: str
+    image_url: str | None = None
 
 
 @app.get("/certifications")
@@ -441,7 +468,7 @@ def get_certifications(
 ):
     return (
         db.query(models.Certification)
-        .filter(models.Certification.user_id == current_user.id)
+        .filter(models.Certification.user_id == current_user.id, models.Certification.deleted_at == None)
         .all()
     )
 
@@ -456,7 +483,7 @@ def create_certification(
         user_id=current_user.id,
         name=certification.name,
         organization=certification.organization,
-        status=certification.status,
+        image_url=certification.image_url,
     )
     db.add(new_certification)
     db.commit()
@@ -476,6 +503,7 @@ def update_certification(
         .filter(
             models.Certification.id == certification_id,
             models.Certification.user_id == current_user.id,
+            models.Certification.deleted_at == None,
         )
         .first()
     )
@@ -484,7 +512,7 @@ def update_certification(
 
     certification.name = updated_certification.name
     certification.organization = updated_certification.organization
-    certification.status = updated_certification.status
+    certification.image_url = updated_certification.image_url
 
     db.commit()
     db.refresh(certification)
@@ -508,9 +536,9 @@ def delete_certification(
     if certification is None:
         raise HTTPException(status_code=404, detail="Certification not found")
 
-    db.delete(certification)
+    certification.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Certification deleted successfully"}
+    return {"message": "Certification deleted successfully", "id": certification_id}
 
 
 # =========================
@@ -537,7 +565,7 @@ def get_goals(
 ):
     return (
         db.query(models.Goal)
-        .filter(models.Goal.user_id == current_user.id)
+        .filter(models.Goal.user_id == current_user.id, models.Goal.deleted_at == None)
         .all()
     )
 
@@ -572,6 +600,7 @@ def update_goal(
         .filter(
             models.Goal.id == goal_id,
             models.Goal.user_id == current_user.id,
+            models.Goal.deleted_at == None,
         )
         .first()
     )
@@ -604,9 +633,9 @@ def delete_goal(
     if goal is None:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    db.delete(goal)
+    goal.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Goal deleted successfully"}
+    return {"message": "Goal deleted successfully", "id": goal_id}
 
 
 # =========================
@@ -633,7 +662,7 @@ def get_journal_entries(
 ):
     return (
         db.query(models.JournalEntry)
-        .filter(models.JournalEntry.user_id == current_user.id)
+        .filter(models.JournalEntry.user_id == current_user.id, models.JournalEntry.deleted_at == None)
         .order_by(models.JournalEntry.created_at.desc())
         .all()
     )
@@ -650,6 +679,7 @@ def get_journal_entry(
         .filter(
             models.JournalEntry.id == entry_id,
             models.JournalEntry.user_id == current_user.id,
+            models.JournalEntry.deleted_at == None,
         )
         .first()
     )
@@ -688,6 +718,7 @@ def update_journal_entry(
         .filter(
             models.JournalEntry.id == entry_id,
             models.JournalEntry.user_id == current_user.id,
+            models.JournalEntry.deleted_at == None,
         )
         .first()
     )
@@ -720,9 +751,9 @@ def delete_journal_entry(
     if entry is None:
         raise HTTPException(status_code=404, detail="Journal entry not found")
 
-    db.delete(entry)
+    entry.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Journal entry deleted successfully"}
+    return {"message": "Journal entry deleted successfully", "id": entry_id}
 
 
 # =========================
@@ -753,7 +784,7 @@ def get_coding_progress(
 ):
     return (
         db.query(models.CodingProgress)
-        .filter(models.CodingProgress.user_id == current_user.id)
+        .filter(models.CodingProgress.user_id == current_user.id, models.CodingProgress.deleted_at == None)
         .order_by(models.CodingProgress.created_at.desc())
         .all()
     )
@@ -770,6 +801,7 @@ def get_coding_problem(
         .filter(
             models.CodingProgress.id == problem_id,
             models.CodingProgress.user_id == current_user.id,
+            models.CodingProgress.deleted_at == None,
         )
         .first()
     )
@@ -810,6 +842,7 @@ def update_coding_progress(
         .filter(
             models.CodingProgress.id == problem_id,
             models.CodingProgress.user_id == current_user.id,
+            models.CodingProgress.deleted_at == None,
         )
         .first()
     )
@@ -844,9 +877,9 @@ def delete_coding_progress(
     if problem is None:
         raise HTTPException(status_code=404, detail="Coding problem not found")
 
-    db.delete(problem)
+    problem.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Coding progress deleted successfully"}
+    return {"message": "Coding progress deleted successfully", "id": problem_id}
 
 
 # =========================
@@ -879,7 +912,7 @@ def get_applications(
 ):
     return (
         db.query(models.Application)
-        .filter(models.Application.user_id == current_user.id)
+        .filter(models.Application.user_id == current_user.id, models.Application.deleted_at == None)
         .order_by(models.Application.created_at.desc())
         .all()
     )
@@ -896,6 +929,7 @@ def get_application(
         .filter(
             models.Application.id == application_id,
             models.Application.user_id == current_user.id,
+            models.Application.deleted_at == None,
         )
         .first()
     )
@@ -937,6 +971,7 @@ def update_application(
         .filter(
             models.Application.id == application_id,
             models.Application.user_id == current_user.id,
+            models.Application.deleted_at == None,
         )
         .first()
     )
@@ -972,9 +1007,9 @@ def delete_application(
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    db.delete(application)
+    application.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Application deleted successfully"}
+    return {"message": "Application deleted successfully", "id": application_id}
 
 
 # =========================
@@ -1009,7 +1044,7 @@ def get_academic_info(
 ):
     return (
         db.query(models.AcademicInfo)
-        .filter(models.AcademicInfo.user_id == current_user.id)
+        .filter(models.AcademicInfo.user_id == current_user.id, models.AcademicInfo.deleted_at == None)
         .order_by(models.AcademicInfo.created_at.desc())
         .all()
     )
@@ -1026,6 +1061,7 @@ def get_academic_record(
         .filter(
             models.AcademicInfo.id == record_id,
             models.AcademicInfo.user_id == current_user.id,
+            models.AcademicInfo.deleted_at == None,
         )
         .first()
     )
@@ -1068,6 +1104,7 @@ def update_academic_record(
         .filter(
             models.AcademicInfo.id == record_id,
             models.AcademicInfo.user_id == current_user.id,
+            models.AcademicInfo.deleted_at == None,
         )
         .first()
     )
@@ -1104,9 +1141,9 @@ def delete_academic_record(
     if record is None:
         raise HTTPException(status_code=404, detail="Academic record not found")
 
-    db.delete(record)
+    record.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Academic record deleted successfully"}
+    return {"message": "Academic record deleted successfully", "id": record_id}
 
 
 # =========================
@@ -1145,7 +1182,7 @@ def get_profiles(
 ):
     return (
         db.query(models.Profile)
-        .filter(models.Profile.user_id == current_user.id)
+        .filter(models.Profile.user_id == current_user.id, models.Profile.deleted_at == None)
         .order_by(models.Profile.created_at.desc())
         .all()
     )
@@ -1162,6 +1199,7 @@ def get_profile(
         .filter(
             models.Profile.id == profile_id,
             models.Profile.user_id == current_user.id,
+            models.Profile.deleted_at == None,
         )
         .first()
     )
@@ -1217,6 +1255,7 @@ def update_profile(
         .filter(
             models.Profile.id == profile_id,
             models.Profile.user_id == current_user.id,
+            models.Profile.deleted_at == None,
         )
         .first()
     )
@@ -1255,9 +1294,9 @@ def delete_profile(
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    db.delete(profile)
+    profile.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Profile deleted successfully"}
+    return {"message": "Profile deleted successfully", "id": profile_id}
 
 
 # =========================
@@ -1298,6 +1337,149 @@ async def upload_file(
 
 
 # =========================
+# RECYCLE BIN
+# =========================
+
+
+@app.get("/recycle-bin")
+def get_recycle_bin(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    uid = current_user.id
+    items = []
+
+    TABLE_MAP = [
+        ("projects", models.Project, "title"),
+        ("skills", models.Skill, "name"),
+        ("certifications", models.Certification, "name"),
+        ("goals", models.Goal, "title"),
+        ("journal", models.JournalEntry, "title"),
+        ("coding-progress", models.CodingProgress, "title"),
+        ("applications", models.Application, "company"),
+        ("academic-info", models.AcademicInfo, "institution"),
+    ]
+
+    for table_name, model, label_field in TABLE_MAP:
+        deleted = (
+            db.query(model)
+            .filter(model.user_id == uid, model.deleted_at != None)
+            .all()
+        )
+        for item in deleted:
+            items.append({
+                "id": item.id,
+                "type": table_name,
+                "label": getattr(item, label_field, "Untitled"),
+                "deleted_at": item.deleted_at.isoformat() if item.deleted_at else None,
+            })
+
+    items.sort(key=lambda x: x["deleted_at"] or "", reverse=True)
+    return items
+
+
+@app.post("/recycle-bin/{item_type}/{item_id}/restore")
+def restore_item(
+    item_type: str,
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    MODEL_MAP = {
+        "projects": models.Project,
+        "skills": models.Skill,
+        "certifications": models.Certification,
+        "goals": models.Goal,
+        "journal": models.JournalEntry,
+        "coding-progress": models.CodingProgress,
+        "applications": models.Application,
+        "academic-info": models.AcademicInfo,
+    }
+
+    model = MODEL_MAP.get(item_type)
+    if model is None:
+        raise HTTPException(status_code=400, detail="Invalid item type")
+
+    item = (
+        db.query(model)
+        .filter(model.id == item_id, model.user_id == current_user.id)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    item.deleted_at = None
+    db.commit()
+    return {"message": "Item restored successfully"}
+
+
+@app.delete("/recycle-bin/{item_type}/{item_id}")
+def permanent_delete(
+    item_type: str,
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    MODEL_MAP = {
+        "projects": models.Project,
+        "skills": models.Skill,
+        "certifications": models.Certification,
+        "goals": models.Goal,
+        "journal": models.JournalEntry,
+        "coding-progress": models.CodingProgress,
+        "applications": models.Application,
+        "academic-info": models.AcademicInfo,
+    }
+
+    model = MODEL_MAP.get(item_type)
+    if model is None:
+        raise HTTPException(status_code=400, detail="Invalid item type")
+
+    item = (
+        db.query(model)
+        .filter(model.id == item_id, model.user_id == current_user.id)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    db.delete(item)
+    db.commit()
+    return {"message": "Item permanently deleted"}
+
+
+@app.delete("/recycle-bin/clear")
+def clear_recycle_bin(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    uid = current_user.id
+
+    TABLE_MAP = [
+        models.Project,
+        models.Skill,
+        models.Certification,
+        models.Goal,
+        models.JournalEntry,
+        models.CodingProgress,
+        models.Application,
+        models.AcademicInfo,
+    ]
+
+    for model in TABLE_MAP:
+        items = (
+            db.query(model)
+            .filter(model.user_id == uid, model.deleted_at != None)
+            .all()
+        )
+        for item in items:
+            db.delete(item)
+
+    db.commit()
+    return {"message": "Recycle bin cleared"}
+
+
+# =========================
 # DASHBOARD
 # =========================
 
@@ -1312,14 +1494,6 @@ def get_dashboard(
 
     total_projects = (
         db.query(models.Project).filter(models.Project.user_id == uid).count()
-    )
-    completed_projects = (
-        db.query(models.Project)
-        .filter(
-            models.Project.user_id == uid,
-            models.Project.status == "Completed",
-        )
-        .count()
     )
     total_skills = (
         db.query(models.Skill).filter(models.Skill.user_id == uid).count()
@@ -1360,7 +1534,7 @@ def get_dashboard(
     )
 
     return {
-        "projects": {"total": total_projects, "completed": completed_projects},
+        "projects": {"total": total_projects},
         "skills": {"total": total_skills},
         "goals": {"total": total_goals, "completed": completed_goals},
         "applications": {"total": total_applications},
@@ -1385,22 +1559,12 @@ def get_skill_gap(
         .all()
     )
 
-    recommendations = {
-        "Beginner": "Focus on fundamentals and build small projects.",
-        "Intermediate": "Build advanced projects and strengthen practical experience.",
-        "Advanced": "Focus on specialization, system design, and real-world projects.",
-    }
-
     skill_data = []
     for skill in skills:
         skill_data.append(
             {
                 "name": skill.name,
-                "level": skill.level,
-                "recommendation": recommendations.get(
-                    skill.level,
-                    "Continue improving this skill with practical projects.",
-                ),
+                "description": skill.description or "",
             }
         )
 
@@ -1411,17 +1575,10 @@ def get_skill_gap(
             "overall_recommendation": "Start by adding your technical and professional skills.",
         }
 
-    beginner_count = sum(1 for s in skill_data if s["level"] == "Beginner")
-    intermediate_count = sum(1 for s in skill_data if s["level"] == "Intermediate")
-    advanced_count = sum(1 for s in skill_data if s["level"] == "Advanced")
-
     return {
         "message": "Skill gap analysis completed successfully.",
         "summary": {
             "total_skills": len(skill_data),
-            "beginner": beginner_count,
-            "intermediate": intermediate_count,
-            "advanced": advanced_count,
         },
         "skills": skill_data,
         "overall_recommendation": "Focus on improving your weakest skills first, then build projects that combine your strongest skills.",
@@ -1443,21 +1600,8 @@ def get_career_readiness(
     total_skills = (
         db.query(models.Skill).filter(models.Skill.user_id == uid).count()
     )
-    advanced_skills = (
-        db.query(models.Skill)
-        .filter(models.Skill.user_id == uid, models.Skill.level == "Advanced")
-        .count()
-    )
     total_projects = (
         db.query(models.Project).filter(models.Project.user_id == uid).count()
-    )
-    completed_projects = (
-        db.query(models.Project)
-        .filter(
-            models.Project.user_id == uid,
-            models.Project.status == "Completed",
-        )
-        .count()
     )
     solved_problems = (
         db.query(models.CodingProgress)
@@ -1479,13 +1623,11 @@ def get_career_readiness(
     )
 
     score = 0
-    score += min(total_skills * 3, 20)
-    score += min(advanced_skills * 5, 10)
-    score += min(total_projects * 5, 10)
-    score += min(completed_projects * 7, 15)
+    score += min(total_skills * 5, 30)
+    score += min(total_projects * 7, 20)
     score += min(solved_problems * 2, 20)
     score += min(total_certifications * 5, 15)
-    score += min(completed_goals * 2, 10)
+    score += min(completed_goals * 2, 15)
     score = min(score, 100)
 
     if score >= 80:
@@ -1506,8 +1648,8 @@ def get_career_readiness(
         "level": readiness_level,
         "recommendation": recommendation,
         "breakdown": {
-            "skills": {"total": total_skills, "advanced": advanced_skills},
-            "projects": {"total": total_projects, "completed": completed_projects},
+            "skills": {"total": total_skills},
+            "projects": {"total": total_projects},
             "coding": {"solved": solved_problems},
             "certifications": {"total": total_certifications},
             "goals": {"completed": completed_goals},
@@ -1618,21 +1760,8 @@ def get_weekly_insights(
     total_projects = (
         db.query(models.Project).filter(models.Project.user_id == uid).count()
     )
-    completed_projects = (
-        db.query(models.Project)
-        .filter(
-            models.Project.user_id == uid,
-            models.Project.status == "Completed",
-        )
-        .count()
-    )
     total_skills = (
         db.query(models.Skill).filter(models.Skill.user_id == uid).count()
-    )
-    advanced_skills = (
-        db.query(models.Skill)
-        .filter(models.Skill.user_id == uid, models.Skill.level == "Advanced")
-        .count()
     )
     total_goals = (
         db.query(models.Goal).filter(models.Goal.user_id == uid).count()
@@ -1668,7 +1797,7 @@ def get_weekly_insights(
 
     activity_score = 0
     activity_score += min(total_skills * 10, 25)
-    activity_score += min(completed_projects * 15, 25)
+    activity_score += min(total_projects * 15, 25)
     activity_score += min(completed_goals * 10, 20)
     activity_score += min(solved_problems * 5, 15)
     activity_score += min(total_certifications * 5, 15)
@@ -1692,8 +1821,8 @@ def get_weekly_insights(
         "performance": performance,
         "recommendation": recommendation,
         "breakdown": {
-            "skills": {"total": total_skills, "advanced": advanced_skills},
-            "projects": {"total": total_projects, "completed": completed_projects},
+            "skills": {"total": total_skills},
+            "projects": {"total": total_projects},
             "goals": {"total": total_goals, "completed": completed_goals},
             "coding": {"total": total_coding, "solved": solved_problems},
             "certifications": {"total": total_certifications},

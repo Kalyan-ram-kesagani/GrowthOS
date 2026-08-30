@@ -16,6 +16,7 @@ import {
 
 import Card from "../components/Card";
 import { api } from "../services/api";
+import { useToast } from "../components/Toast";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -69,6 +70,7 @@ const FIELDS = [
 ];
 
 function ProfilePage() {
+  const { addToast } = useToast();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -123,7 +125,7 @@ function ProfilePage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("File too large. Maximum size is 5MB.");
+      addToast("File too large. Maximum size is 5MB.", "error");
       return;
     }
 
@@ -136,9 +138,10 @@ function ProfilePage() {
       const result = await api.upload(file);
       setForm((prev) => ({ ...prev, avatar_url: result.url }));
       setAvatarPreview(result.url);
+      addToast("Avatar uploaded successfully.", "success");
     } catch (error) {
       console.error("Error uploading avatar:", error);
-      alert("Failed to upload image. Please try again.");
+      addToast("Failed to upload image. Please try again.", "error");
       setAvatarPreview(form.avatar_url || null);
     } finally {
       setUploading(false);
@@ -164,10 +167,11 @@ function ProfilePage() {
       setEditing(false);
       setForm({});
       setAvatarPreview(null);
+      addToast("Profile saved successfully.", "success");
       await loadProfile();
     } catch (error) {
       console.error("Error saving profile:", error);
-      alert("Something went wrong. Please try again.");
+      addToast("Something went wrong. Please try again.", "error");
     } finally {
       setSaving(false);
     }
