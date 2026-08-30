@@ -22,22 +22,28 @@ load_dotenv()
 
 
 def migrate_add_deleted_at():
-    inspector = inspect(engine)
-    tables_needing_col = [
-        "projects", "skills", "certifications", "goals",
-        "journal_entries", "coding_progress", "applications", "academic_info",
-    ]
-    with engine.connect() as conn:
-        for table in tables_needing_col:
-            if table in inspector.get_table_names():
-                cols = [c["name"] for c in inspector.get_columns(table)]
-                if "deleted_at" not in cols:
-                    conn.execute(text(f'ALTER TABLE {table} ADD COLUMN deleted_at DATETIME'))
-                    conn.commit()
+    try:
+        inspector = inspect(engine)
+        tables_needing_col = [
+            "projects", "skills", "certifications", "goals",
+            "journal_entries", "coding_progress", "applications", "academic_info",
+        ]
+        with engine.connect() as conn:
+            for table in tables_needing_col:
+                if table in inspector.get_table_names():
+                    cols = [c["name"] for c in inspector.get_columns(table)]
+                    if "deleted_at" not in cols:
+                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN deleted_at DATETIME'))
+                        conn.commit()
+    except Exception as e:
+        print(f"Migration skipped: {e}")
 
 
-Base.metadata.create_all(bind=engine)
-migrate_add_deleted_at()
+try:
+    Base.metadata.create_all(bind=engine)
+    migrate_add_deleted_at()
+except Exception as e:
+    print(f"Database init failed: {e}")
 
 # =========================
 # CONFIG
