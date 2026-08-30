@@ -43,9 +43,7 @@ migrate_add_deleted_at()
 # CONFIG
 # =========================
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
-    raise RuntimeError("JWT_SECRET_KEY environment variable is not set")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.urandom(32).hex()
 
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
@@ -54,7 +52,7 @@ CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173,https://growthos-liard.vercel.app",
+        "http://localhost:5173,http://127.0.0.1:5173,https://growthos-liard.vercel.app,https://growth-os-backend-ebon.vercel.app",
     ).split(",")
     if origin.strip()
 ]
@@ -86,6 +84,12 @@ UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 
 # =========================
 # AUTH HELPERS
