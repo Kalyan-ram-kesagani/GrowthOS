@@ -56,7 +56,7 @@ function Dashboard({ stats, setPage }) {
 
   const backendStats = dashboardData || {
     projects: { total: stats?.projects || 0 },
-    coding: { solved: stats?.leetcode || 0 },
+    coding: { solved: stats?.leetcode || 0, auto_synced: 0, connected_accounts: 0 },
     certifications: { total: stats?.certifications || 0 },
     applications: { total: 0 },
   };
@@ -132,7 +132,9 @@ function Dashboard({ stats, setPage }) {
           icon={Code2}
           value={backendStats.coding?.solved || 0}
           label="Problems solved"
-          sub="LeetCode progress"
+          sub={backendStats.coding?.connected_accounts > 0
+            ? `From ${backendStats.coding.connected_accounts} platform${backendStats.coding.connected_accounts > 1 ? "s" : ""}`
+            : "LeetCode progress"}
         />
 
         <Stat

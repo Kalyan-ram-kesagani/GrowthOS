@@ -3,6 +3,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
+load_dotenv()
+
 import bcrypt
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,10 +17,23 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy import text, inspect
 
+from supabase import create_client, Client
+
 import models
 from database import engine, SessionLocal, Base
+from routers.coding import router as coding_router
 
-load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+CONTENT_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
 
 
 def migrate_add_deleted_at():
@@ -27,13 +42,15 @@ def migrate_add_deleted_at():
         tables_needing_col = [
             "projects", "skills", "certifications", "goals",
             "journal_entries", "coding_progress", "applications", "academic_info",
+            "profile",
         ]
         with engine.connect() as conn:
             for table in tables_needing_col:
                 if table in inspector.get_table_names():
                     cols = [c["name"] for c in inspector.get_columns(table)]
                     if "deleted_at" not in cols:
-                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN deleted_at DATETIME'))
+                        col_type = "TIMESTAMP" if not os.getenv("DATABASE_URL", "sqlite").startswith("sqlite") else "DATETIME"
+                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN deleted_at {col_type}'))
                         conn.commit()
     except Exception as e:
         print(f"Migration skipped: {e}")
@@ -77,19 +94,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(coding_router)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
+    import traceback
+    tb = traceback.format_exc()
+    print(f"ERROR {request.method} {request.url.path}: {tb}")
+    response = JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
-        )
-
-
-UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-
-app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+        content={"detail": str(exc), "type": type(exc).__name__},
+    )
+    origin = request.headers.get("origin", "")
+    if origin in CORS_ORIGINS or "*" in CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 
 @app.get("/health")
@@ -1315,13 +1336,21 @@ def delete_profile(
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+ALLOWED_BUCKETS = {"avatars", "uploads"}
 
 
 @app.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
+    bucket: str = "uploads",
     current_user: models.User = Depends(get_current_user),
 ):
+    if bucket not in ALLOWED_BUCKETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid bucket '{bucket}'. Allowed: {', '.join(ALLOWED_BUCKETS)}",
+        )
+
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -1337,13 +1366,16 @@ async def upload_file(
         )
 
     filename = f"{current_user.id}_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOADS_DIR, filename)
+    content_type = CONTENT_TYPES.get(ext, "application/octet-stream")
 
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    supabase.storage.from_(bucket).upload(
+        path=filename,
+        file=contents,
+        file_options={"content-type": content_type},
+    )
 
-    url = f"/uploads/{filename}"
-    return {"url": url}
+    public_url = supabase.storage.from_(bucket).get_public_url(filename)
+    return {"url": public_url}
 
 
 # =========================
@@ -1537,9 +1569,21 @@ def get_dashboard(
         )
         .count()
     )
+    auto_solved = (
+        db.query(models.CodingProblem)
+        .filter(models.CodingProblem.user_id == uid)
+        .count()
+    )
+    total_solved = solved_problems + auto_solved
     total_certifications = (
         db.query(models.Certification)
         .filter(models.Certification.user_id == uid)
+        .count()
+    )
+
+    connected_accounts = (
+        db.query(models.CodingAccount)
+        .filter(models.CodingAccount.user_id == uid)
         .count()
     )
 
@@ -1548,7 +1592,7 @@ def get_dashboard(
         "skills": {"total": total_skills},
         "goals": {"total": total_goals, "completed": completed_goals},
         "applications": {"total": total_applications},
-        "coding": {"total": total_coding, "solved": solved_problems},
+        "coding": {"total": total_coding, "solved": total_solved, "auto_synced": auto_solved, "manual": solved_problems, "connected_accounts": connected_accounts},
         "certifications": {"total": total_certifications},
     }
 

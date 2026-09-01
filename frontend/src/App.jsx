@@ -28,6 +28,7 @@ import Career from "./pages/Career";
 import Analytics from "./pages/Analytics";
 import AIAssistant from "./pages/AIAssistant";
 import RecycleBinPage from "./pages/RecycleBin";
+import CodingPage from "./pages/CodingPage";
 
 import { nav } from "./config/navigation";
 import { initialStats } from "./data/dashboard";
@@ -423,56 +424,7 @@ function App() {
             ]}
           />
         ) : page === "Coding" ? (
-          <DataPage
-            type="coding-progress"
-            title="Coding Progress"
-            description="Track your LeetCode and problem-solving journey."
-            icon={Code2}
-            fields={[
-              {
-                name: "title",
-                placeholder: "Problem title",
-              },
-              {
-                name: "platform",
-                type: "select",
-                default: "LeetCode",
-                options: [
-                  "LeetCode",
-                  "HackerRank",
-                  "CodeChef",
-                  "GeeksforGeeks",
-                  "Other",
-                ],
-              },
-              {
-                name: "difficulty",
-                type: "select",
-                default: "Easy",
-                options: [
-                  "Easy",
-                  "Medium",
-                  "Hard",
-                ],
-              },
-              {
-                name: "status",
-                type: "select",
-                default: "Solved",
-                options: [
-                  "Solved",
-                  "Attempted",
-                  "In Progress",
-                ],
-              },
-              {
-                name: "notes",
-                type: "textarea",
-                placeholder:
-                  "Notes or approach used...",
-              },
-            ]}
-          />
+          <CodingPage />
         ) : page === "Academics" ? (
           <DataPage
             type="academic-info"

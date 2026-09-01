@@ -79,6 +79,9 @@ function Analytics() {
           <Code2 />
           <h3>{stats?.coding?.solved ?? 0}</h3>
           <p>Problems Solved</p>
+          {stats?.coding?.auto_synced > 0 && (
+            <small>{stats.coding.auto_synced} auto-synced</small>
+          )}
         </div>
 
         <div className="card moduleCard">

@@ -135,7 +135,7 @@ function ProfilePage() {
 
     try {
       setUploading(true);
-      const result = await api.upload(file);
+      const result = await api.upload(file, "avatars");
       setForm((prev) => ({ ...prev, avatar_url: result.url }));
       setAvatarPreview(result.url);
       addToast("Avatar uploaded successfully.", "success");

@@ -67,7 +67,7 @@ export const api = {
     });
   },
 
-  async upload(file) {
+  async upload(file, bucket = "uploads") {
     const token = getAccessToken();
     if (!token) {
       throw new Error("Not authenticated. Please log in.");
@@ -76,7 +76,7 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(`${API_BASE_URL}/upload`, {
+    const response = await fetch(`${API_BASE_URL}/upload?bucket=${bucket}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
