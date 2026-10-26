@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Pencil,
@@ -22,39 +22,62 @@ function DataPage({
   description,
   icon: Icon,
   fields,
+  collapsibleForm = false,
 }) {
   const { addToast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const loadRequestId = useRef(0);
 
   const loadItems = async () => {
+    const requestId = ++loadRequestId.current;
+
     try {
       setLoading(true);
+      setLoadError("");
 
       const data = await api.get(`/${type}`);
 
-      setItems(
-        Array.isArray(data)
-          ? [...data].reverse()
-          : []
-      );
+      if (!Array.isArray(data)) {
+        throw new Error(`Invalid response while loading ${title.toLowerCase()}.`);
+      }
+
+      if (requestId !== loadRequestId.current) return;
+      setItems([...data].reverse());
     } catch (error) {
+      if (requestId !== loadRequestId.current) return;
+
       console.error(
         `Error loading ${type}:`,
         error
       );
 
       setItems([]);
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : `Unable to load ${title.toLowerCase()}.`
+      );
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    setForm({});
+    setEditingId(null);
+    setIsFormOpen(false);
     loadItems();
+    return () => {
+      loadRequestId.current += 1;
+    };
   }, [type]);
 
   const handleChange = (field, value) => {
@@ -67,6 +90,9 @@ function DataPage({
   const resetForm = () => {
     setForm({});
     setEditingId(null);
+    if (collapsibleForm) {
+      setIsFormOpen(false);
+    }
   };
 
   const saveItem = async () => {
@@ -125,6 +151,7 @@ function DataPage({
 
     setForm(editData);
     setEditingId(item.id);
+    setIsFormOpen(true);
 
     window.scrollTo({
       top: 0,
@@ -177,30 +204,62 @@ function DataPage({
     );
   };
 
+  const isFormVisible = !collapsibleForm || isFormOpen;
+
   return (
-    <div className="page module dataPage">
+    <div
+      className={`page module dataPage${
+        collapsibleForm ? " certificatesPage" : ""
+      }`}
+    >
 
       {/* PAGE HERO */}
 
-      <div className="moduleHeader dataPageHeader">
+      <div
+        className={`moduleHeader dataPageHeader${
+          collapsibleForm ? " dataPageHeaderWithAction" : ""
+        }`}
+      >
 
-        <span className="eyebrow">
-          <Icon size={15} />
-          GROWTHOS {title.toUpperCase()}
-        </span>
+        <div className="dataPageHeading">
+          <span className="eyebrow">
+            <Icon size={15} />
+            GROWTHOS {title.toUpperCase()}
+          </span>
 
-        <h1>{title}</h1>
+          <h1>{title}</h1>
 
-        <p>
-          {description}
-        </p>
+          <p>
+            {description}
+          </p>
+        </div>
 
+        {collapsibleForm && (
+          <button
+            type="button"
+            className="addCertificateBtn"
+            disabled={saving}
+            onClick={() => {
+              if (isFormOpen) {
+                resetForm();
+              } else {
+                setIsFormOpen(true);
+              }
+            }}
+            aria-expanded={isFormOpen}
+            aria-controls={isFormOpen ? "data-entry-form" : undefined}
+          >
+            {isFormOpen ? <X size={17} /> : <Plus size={17} />}
+            {isFormOpen ? "Close" : "Add New Certificate"}
+          </button>
+        )}
       </div>
 
 
       {/* ADD / EDIT FORM */}
 
-      <div className="formCenter">
+      {isFormVisible && (
+      <div className="formCenter" id="data-entry-form">
 
         <Card className="dataForm">
 
@@ -498,27 +557,14 @@ function DataPage({
         </Card>
 
       </div>
+      )}
 
 
       {/* ITEMS SECTION */}
 
       <div className="dataItemsSection">
-
         <div className="dataItemsHeader">
-
-          <div>
-
-            <span className="sectionEyebrow">
-              YOUR INFORMATION
-            </span>
-
-            <h2>
-              {title}
-            </h2>
-
-          </div>
-
-          {!loading && (
+          {!loading && !loadError && (
             <span className="itemCount">
               {items.length}{" "}
               {items.length === 1
@@ -526,20 +572,29 @@ function DataPage({
                 : "items"}
             </span>
           )}
-
         </div>
 
 
         <div className="moduleGrid">
-
           {loading ? (
-
             <div className="emptyState loadingState">
               Loading your information...
             </div>
 
-          ) : items.length === 0 ? (
+          ) : loadError ? (
+            <div className="emptyState loadErrorState" role="alert">
+              <h3>Unable to load {title.toLowerCase()}</h3>
+              <p>{loadError}</p>
+              <button
+                type="button"
+                className="retryBtn"
+                onClick={loadItems}
+              >
+                Try again
+              </button>
+            </div>
 
+          ) : items.length === 0 ? (
             <div className="emptyState">
 
               <div className="emptyStateIcon">
@@ -551,33 +606,95 @@ function DataPage({
               </h3>
 
               <p>
-                Add your first item using
-                the form above.
+                {collapsibleForm
+                  ? "Add your first certificate using the button above."
+                  : "Add your first item using the form above."}
               </p>
 
             </div>
 
           ) : (
 
-            items.map((item) => (
+            items.map((item) => collapsibleForm ? (
+              <Card
+                key={item.id}
+                className="moduleCard dataItemCard certificateCard"
+              >
+                <div className="certificatePreview">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url.startsWith("http") ? item.image_url : `${API_BASE_URL}${item.image_url}`}
+                      alt={getItemTitle(item)}
+                      className="certImage"
+                    />
+                  ) : (
+                    <div className="certificatePreviewEmpty">
+                      <Icon size={34} />
+                      <span>No certificate image</span>
+                    </div>
+                  )}
+                </div>
 
+                <div className="certificateInfo">
+                  <h3>{getItemTitle(item)}</h3>
+
+                  {item.organization && (
+                    <p className="certificateOrganization">
+                      Issued by {item.organization}
+                    </p>
+                  )}
+
+                  <div className="itemCreated">
+                    <CalendarDays size={16} />
+                    <span>
+                      {item.created_at
+                        ? new Date(item.created_at).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )
+                        : "Recently added"}
+                    </span>
+                  </div>
+
+                  <div className="cardActions">
+                    <button
+                      type="button"
+                      className="editBtn"
+                      onClick={() => startEdit(item)}
+                    >
+                      <Pencil size={16} />
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="deleteBtn"
+                      onClick={() => deleteItem(item.id)}
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
               <Card
                 key={item.id}
                 className="moduleCard dataItemCard"
               >
-
                 <div className="dataCardTop">
-
                   <div className="dataCardIcon">
                     <Icon size={21} />
                   </div>
-
                   {item.status && (
                     <span className="statusBadge">
                       {item.status}
                     </span>
                   )}
-
                 </div>
 
                 {item.image_url && (
@@ -590,11 +707,7 @@ function DataPage({
                   </div>
                 )}
 
-
-                <h3>
-                  {getItemTitle(item)}
-                </h3>
-
+                <h3>{getItemTitle(item)}</h3>
 
                 {item.professional_title && (
                   <p className="itemHighlight">
@@ -602,13 +715,11 @@ function DataPage({
                   </p>
                 )}
 
-
                 {item.description && (
                   <p className="cardDescription">
                     {item.description}
                   </p>
                 )}
-
 
                 {item.content && (
                   <p className="cardDescription">
@@ -616,13 +727,11 @@ function DataPage({
                   </p>
                 )}
 
-
                 {item.email && (
                   <p className="itemDetail">
                     {item.email}
                   </p>
                 )}
-
 
                 {item.phone && (
                   <p className="itemDetail">
@@ -630,13 +739,11 @@ function DataPage({
                   </p>
                 )}
 
-
                 {item.location && (
                   <p className="itemDetail">
                     {item.location}
                   </p>
                 )}
-
 
                 {item.category && (
                   <p className="itemMeta">
@@ -647,7 +754,6 @@ function DataPage({
                   </p>
                 )}
 
-
                 {item.organization && (
                   <p className="itemMeta">
                     Organization:
@@ -657,7 +763,6 @@ function DataPage({
                   </p>
                 )}
 
-
                 {item.description && (
                   <p className="itemMeta">
                     <span>
@@ -666,19 +771,12 @@ function DataPage({
                   </p>
                 )}
 
-
                 <div className="itemCreated">
-
                   <CalendarDays size={16} />
-
                   <span>
-
                     Created:{" "}
-
                     {item.created_at
-                      ? new Date(
-                          item.created_at
-                        ).toLocaleDateString(
+                      ? new Date(item.created_at).toLocaleDateString(
                           "en-GB",
                           {
                             day: "2-digit",
@@ -687,44 +785,29 @@ function DataPage({
                           }
                         )
                       : "Recently added"}
-
                   </span>
-
                 </div>
 
-
                 <div className="cardActions">
-
                   <button
                     type="button"
                     className="editBtn"
-                    onClick={() =>
-                      startEdit(item)
-                    }
+                    onClick={() => startEdit(item)}
                   >
-
                     <Pencil size={16} />
                     Edit
-
                   </button>
 
                   <button
                     type="button"
                     className="deleteBtn"
-                    onClick={() =>
-                      deleteItem(item.id)
-                    }
+                    onClick={() => deleteItem(item.id)}
                   >
-
                     <Trash2 size={16} />
                     Delete
-
                   </button>
-
                 </div>
-
               </Card>
-
             ))
 
           )}

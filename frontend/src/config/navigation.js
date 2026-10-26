@@ -26,7 +26,6 @@ export const nav = [
   ["Applications", BriefcaseBusiness],
   ["Journal", BookOpen],
   ["Goals", Target],
-  ["Analytics", BarChart3],
-  ["AI Assistant", Sparkles],
+  ["Analysis", Sparkles],
   ["Recycle Bin", Trash2],
 ];

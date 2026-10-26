@@ -141,7 +141,7 @@ function AIAssistant() {
           GROWTH AI
         </span>
 
-        <h1>Your AI Growth Assistant</h1>
+        <h1>Your Growth Analysis</h1>
 
         <p>
           Analyze your GrowthOS data and get

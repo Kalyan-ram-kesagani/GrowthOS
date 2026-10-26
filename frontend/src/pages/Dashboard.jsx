@@ -354,7 +354,7 @@ function Dashboard({ stats, setPage }) {
 
           <button
             className="textBtn"
-            onClick={() => setPage("AI Assistant")}
+            onClick={() => setPage("Analysis")}
           >
             Ask Growth AI →
           </button>

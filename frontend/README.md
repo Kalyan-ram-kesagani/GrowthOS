@@ -17,5 +17,5 @@ Frontend UI prototype with interactive navigation and demo data.
 3. Authentication
 4. CRUD APIs
 5. GitHub + LeetCode integrations
-6. AI assistant
+6. Analysis
 7. Deployment

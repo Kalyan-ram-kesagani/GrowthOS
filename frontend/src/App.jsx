@@ -25,7 +25,6 @@ import ProjectsPage from "./pages/Projects";
 import DataPage from "./pages/DataPage";
 import ProfilePage from "./pages/ProfilePage";
 import Career from "./pages/Career";
-import Analytics from "./pages/Analytics";
 import AIAssistant from "./pages/AIAssistant";
 import RecycleBinPage from "./pages/RecycleBin";
 import CodingPage from "./pages/CodingPage";
@@ -142,21 +141,9 @@ const modules = {
     ],
   },
 
-  Analytics: {
-    icon: BarChart3,
-    title: "Growth Analytics",
-    desc: "See your progress through data.",
-    cards: [
-      "Skill growth",
-      "Coding trend",
-      "Project history",
-      "Career readiness",
-    ],
-  },
-
-  "AI Assistant": {
+  "Analysis": {
     icon: Sparkles,
-    title: "Growth AI Assistant",
+    title: "Growth Analysis",
     desc: "Your AI coach for skills, projects and career decisions.",
     cards: [
       "Skill gap analysis",
@@ -230,8 +217,7 @@ function ModulePage({ name, addItem }) {
 function App() {
   const { signOut } = useAuth();
 
-  const [page, setPage] = useState("Dashboard");  const [open, setOpen] = useState(false);
-  const [stats, setStats] = useState(initialStats);
+  const [page, setPage] = useState("Dashboard"); const [open, setOpen] = useState(false);
 
   const addItem = (name, item) => {
     const pageMap = {
@@ -243,8 +229,7 @@ function App() {
       "Academics": "Academics",
       "Journal": "Journal",
       "Career": "Career",
-      "Analytics": "Analytics",
-      "AI Assistant": "AI Assistant",
+      "Analysis": "Analysis",
       "Profile": "Profile",
       "Recycle Bin": "Recycle Bin",
     };
@@ -256,58 +241,58 @@ function App() {
   return (
     <div className="app">
       <aside className={open ? "open" : ""}>
-  <div className="brand">
-    <div className="logo">G</div>
+        <div className="brand">
+          <div className="logo">G</div>
 
-    <b>
-      Growth<span>OS</span>
-    </b>
+          <b>
+            Growth<span>OS</span>
+          </b>
 
-    <button
-      className="close"
-      onClick={() => setOpen(false)}
-    >
-      <X />
-    </button>
-  </div>
+          <button
+            className="close"
+            onClick={() => setOpen(false)}
+          >
+            <X />
+          </button>
+        </div>
 
-  <nav>
-    {nav.map(([name, Icon]) => (
-      <button
-        key={name}
-        className={page === name ? "active" : ""}
-        onClick={() => {
-          setPage(name);
-          setOpen(false);
-        }}
-      >
-        <Icon size={19} />
-        <span>{name}</span>
-      </button>
-    ))}
-  </nav>
+        <nav>
+          {nav.map(([name, Icon]) => (
+            <button
+              key={name}
+              className={page === name ? "active" : ""}
+              onClick={() => {
+                setPage(name);
+                setOpen(false);
+              }}
+            >
+              <Icon size={19} />
+              <span>{name}</span>
+            </button>
+          ))}
+        </nav>
 
-  <div className="sidebarFoot">
-    <div className="avatar">KR</div>
+        <div className="sidebarFoot">
+          <div className="avatar">KR</div>
 
-    <div>
-      <b>Professional Mode</b>
-      <small>Building every day</small>
-    </div>
-<button
-  className="logoutBtn"
-  onClick={async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  }}
->
-  Logout
-</button>
- </div>
-</aside>
+          <div>
+            <b>Professional Mode</b>
+            <small>Building every day</small>
+          </div>
+          <button
+            className="logoutBtn"
+            onClick={async () => {
+              try {
+                await signOut();
+              } catch (error) {
+                console.error("Logout failed:", error);
+              }
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </aside>
 
       <main>
         <header>
@@ -339,19 +324,19 @@ function App() {
 
         {page === "Dashboard" ? (
           <Dashboard
-            stats={stats}
+            stats={initialStats}
             setPage={setPage}
           />
         ) : page === "Projects" ? (
           <ProjectsPage />
         ) : page === "Career" ? (
           <Career setPage={setPage} />
-        ) : page === "Analytics" ? (
-          <Analytics />
-        ) : page === "AI Assistant" ? (
+        ) : page === "Analysis" ? (
           <AIAssistant />
         ) : page === "Profile" ? (
           <ProfilePage />
+        ) : page === "Coding" ? (
+          <CodingPage />
         ) : page === "Skills" ? (
           <DataPage
             type="skills"
@@ -376,6 +361,7 @@ function App() {
             title="Certifications"
             description="Track your completed certifications."
             icon={Award}
+            collapsibleForm
             fields={[
               {
                 name: "name",
@@ -423,8 +409,6 @@ function App() {
               },
             ]}
           />
-        ) : page === "Coding" ? (
-          <CodingPage />
         ) : page === "Academics" ? (
           <DataPage
             type="academic-info"

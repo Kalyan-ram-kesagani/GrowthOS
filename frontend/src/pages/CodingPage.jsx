@@ -58,7 +58,6 @@ function CodingPage() {
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [expandedProblems, setExpandedProblems] = useState({});
 
   const loadAll = useCallback(async () => {
     try {
@@ -225,10 +224,6 @@ function CodingPage() {
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-  };
-
-  const toggleProblemExpand = (index) => {
-    setExpandedProblems((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   if (loading) {
@@ -627,32 +622,10 @@ function CodingPage() {
                         <ExternalLink size={14} />
                       </a>
                     )}
-                    <button
-                      onClick={() => toggleProblemExpand(i)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "var(--muted)",
-                        padding: 2,
-                      }}
-                    >
-                      {expandedProblems[i] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                    
                   </div>
                 </div>
-                {expandedProblems[i] && (
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border)", fontSize: 13, color: "var(--muted)" }}>
-                    {p.url && (
-                      <div style={{ marginBottom: 4 }}>
-                        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-light)", textDecoration: "none" }}>
-                          View on {PLATFORMS.find((pl) => pl.value === p.platform)?.label || p.platform} →
-                        </a>
-                      </div>
-                    )}
-                    <div>Problem ID: {p.title?.toLowerCase().replace(/\s+/g, "-")}</div>
-                  </div>
-                )}
+                
               </div>
             ))}
           </div>
